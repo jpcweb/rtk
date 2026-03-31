@@ -7,7 +7,7 @@
 //! # Architecture
 //!
 //! - Storage: SQLite database (~/.local/share/rtk/tracking.db)
-//! - Retention: 90-day automatic cleanup
+//! - Retention: 10-day automatic cleanup
 //! - Metrics: Input/output tokens, savings %, execution time
 //!
 //! # Quick Start
@@ -61,8 +61,24 @@ fn project_filter_params(project_path: Option<&str>) -> (Option<String>, Option<
     }
 }
 
-/// Number of days to retain tracking history before automatic cleanup.
-const HISTORY_DAYS: i64 = 90;
+/// Hard upper bound for tracking history retention and analytics queries.
+const MAX_HISTORY_DAYS: i64 = 10;
+
+fn effective_history_days(requested_days: u32) -> i64 {
+    requested_days.clamp(1, MAX_HISTORY_DAYS as u32) as i64
+}
+
+fn configured_history_days() -> i64 {
+    let requested_days = crate::core::config::Config::load()
+        .ok()
+        .map(|config| config.tracking.history_days)
+        .unwrap_or(MAX_HISTORY_DAYS as u32);
+    effective_history_days(requested_days)
+}
+
+fn history_cutoff_rfc3339() -> String {
+    (Utc::now() - chrono::Duration::days(configured_history_days())).to_rfc3339()
+}
 
 /// Main tracking interface for recording and querying command history.
 ///
@@ -129,7 +145,7 @@ pub struct GainSummary {
     pub avg_time_ms: u64,
     /// Top 10 commands by tokens saved: (cmd, count, saved, avg_pct, avg_time_ms)
     pub by_command: Vec<(String, usize, usize, f64, u64)>,
-    /// Last 30 days of activity: (date, saved_tokens)
+    /// Retained days of activity: (date, saved_tokens)
     pub by_day: Vec<(String, usize)>,
 }
 
@@ -329,7 +345,7 @@ impl Tracker {
     /// Record a command execution with token counts and timing.
     ///
     /// Calculates savings metrics and stores the record in the database.
-    /// Automatically cleans up records older than 90 days after insertion.
+    /// Automatically cleans up records older than the retained history window after insertion.
     ///
     /// # Arguments
     ///
@@ -386,14 +402,14 @@ impl Tracker {
     }
 
     fn cleanup_old(&self) -> Result<()> {
-        let cutoff = Utc::now() - chrono::Duration::days(HISTORY_DAYS);
+        let cutoff = history_cutoff_rfc3339();
         self.conn.execute(
             "DELETE FROM commands WHERE timestamp < ?1",
-            params![cutoff.to_rfc3339()],
+            params![&cutoff],
         )?;
         self.conn.execute(
             "DELETE FROM parse_failures WHERE timestamp < ?1",
-            params![cutoff.to_rfc3339()],
+            params![&cutoff],
         )?;
         Ok(())
     }
@@ -421,13 +437,18 @@ impl Tracker {
 
     /// Get parse failure summary for `rtk gain --failures`.
     pub fn get_parse_failure_summary(&self) -> Result<ParseFailureSummary> {
+        let cutoff = history_cutoff_rfc3339();
         let total: i64 = self
             .conn
-            .query_row("SELECT COUNT(*) FROM parse_failures", [], |row| row.get(0))?;
+            .query_row(
+                "SELECT COUNT(*) FROM parse_failures WHERE timestamp >= ?1",
+                params![&cutoff],
+                |row| row.get(0),
+            )?;
 
         let succeeded: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM parse_failures WHERE fallback_succeeded = 1",
-            [],
+            "SELECT COUNT(*) FROM parse_failures WHERE fallback_succeeded = 1 AND timestamp >= ?1",
+            params![&cutoff],
             |row| row.get(0),
         )?;
 
@@ -441,12 +462,13 @@ impl Tracker {
         let mut stmt = self.conn.prepare(
             "SELECT raw_command, COUNT(*) as cnt
              FROM parse_failures
+             WHERE timestamp >= ?1
              GROUP BY raw_command
              ORDER BY cnt DESC
              LIMIT 10",
         )?;
         let top_commands = stmt
-            .query_map([], |row| {
+            .query_map(params![&cutoff], |row| {
                 Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -455,11 +477,12 @@ impl Tracker {
         let mut stmt = self.conn.prepare(
             "SELECT timestamp, raw_command, error_message, fallback_succeeded
              FROM parse_failures
+             WHERE timestamp >= ?1
              ORDER BY timestamp DESC
              LIMIT 10",
         )?;
         let recent = stmt
-            .query_map([], |row| {
+            .query_map(params![&cutoff], |row| {
                 Ok(ParseFailureRecord {
                     timestamp: row.get(0)?,
                     raw_command: row.get(1)?,
@@ -483,7 +506,7 @@ impl Tracker {
     /// - Total commands, tokens (input/output/saved)
     /// - Average savings percentage and execution time
     /// - Top 10 commands by tokens saved
-    /// - Last 30 days of activity
+    /// - Retained days of activity
     ///
     /// # Examples
     ///
@@ -506,6 +529,7 @@ impl Tracker {
     /// When `project_path` is `Some`, matches the exact working directory
     /// or any subdirectory (prefix match with path separator).
     pub fn get_summary_filtered(&self, project_path: Option<&str>) -> Result<GainSummary> {
+        let cutoff = history_cutoff_rfc3339();
         let (project_exact, project_glob) = project_filter_params(project_path); // added
         let mut total_commands = 0usize;
         let mut total_input = 0usize;
@@ -516,10 +540,11 @@ impl Tracker {
         let mut stmt = self.conn.prepare(
             "SELECT input_tokens, output_tokens, saved_tokens, exec_time_ms
              FROM commands
-             WHERE (?1 IS NULL OR project_path = ?1 OR project_path GLOB ?2)", // added: project filter
+             WHERE timestamp >= ?1
+               AND (?2 IS NULL OR project_path = ?2 OR project_path GLOB ?3)", // added: project filter
         )?;
 
-        let rows = stmt.query_map(params![project_exact, project_glob], |row| {
+        let rows = stmt.query_map(params![&cutoff, project_exact, project_glob], |row| {
             // added: params
             Ok((
                 row.get::<_, i64>(0)? as usize,
@@ -570,17 +595,19 @@ impl Tracker {
         &self,
         project_path: Option<&str>, // added
     ) -> Result<Vec<CommandStats>> {
+        let cutoff = history_cutoff_rfc3339();
         let (project_exact, project_glob) = project_filter_params(project_path); // added
         let mut stmt = self.conn.prepare(
             "SELECT rtk_cmd, COUNT(*), SUM(saved_tokens), AVG(savings_pct), AVG(exec_time_ms)
              FROM commands
-             WHERE (?1 IS NULL OR project_path = ?1 OR project_path GLOB ?2)
+             WHERE timestamp >= ?1
+               AND (?2 IS NULL OR project_path = ?2 OR project_path GLOB ?3)
              GROUP BY rtk_cmd
              ORDER BY SUM(saved_tokens) DESC
              LIMIT 10", // added: project filter in WHERE
         )?;
 
-        let rows = stmt.query_map(params![project_exact, project_glob], |row| {
+        let rows = stmt.query_map(params![&cutoff, project_exact, project_glob], |row| {
             // added: params
             Ok((
                 row.get::<_, String>(0)?,
@@ -598,17 +625,19 @@ impl Tracker {
         &self,
         project_path: Option<&str>, // added
     ) -> Result<Vec<(String, usize)>> {
+        let cutoff = history_cutoff_rfc3339();
         let (project_exact, project_glob) = project_filter_params(project_path); // added
         let mut stmt = self.conn.prepare(
             "SELECT DATE(timestamp), SUM(saved_tokens)
              FROM commands
-             WHERE (?1 IS NULL OR project_path = ?1 OR project_path GLOB ?2)
+             WHERE timestamp >= ?1
+               AND (?2 IS NULL OR project_path = ?2 OR project_path GLOB ?3)
              GROUP BY DATE(timestamp)
              ORDER BY DATE(timestamp) DESC
-             LIMIT 30", // added: project filter in WHERE
+             LIMIT 10", // added: project filter in WHERE
         )?;
 
-        let rows = stmt.query_map(params![project_exact, project_glob], |row| {
+        let rows = stmt.query_map(params![&cutoff, project_exact, project_glob], |row| {
             // added: params
             Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
         })?;
@@ -642,6 +671,7 @@ impl Tracker {
 
     /// Get daily statistics filtered by project path. // added
     pub fn get_all_days_filtered(&self, project_path: Option<&str>) -> Result<Vec<DayStats>> {
+        let cutoff = history_cutoff_rfc3339();
         let (project_exact, project_glob) = project_filter_params(project_path); // added
         let mut stmt = self.conn.prepare(
             "SELECT
@@ -652,12 +682,13 @@ impl Tracker {
                 SUM(saved_tokens) as saved,
                 SUM(exec_time_ms) as total_time
              FROM commands
-             WHERE (?1 IS NULL OR project_path = ?1 OR project_path GLOB ?2)
+             WHERE timestamp >= ?1
+               AND (?2 IS NULL OR project_path = ?2 OR project_path GLOB ?3)
              GROUP BY DATE(timestamp)
              ORDER BY DATE(timestamp) DESC", // added: project filter
         )?;
 
-        let rows = stmt.query_map(params![project_exact, project_glob], |row| {
+        let rows = stmt.query_map(params![&cutoff, project_exact, project_glob], |row| {
             // added: params
             let input = row.get::<_, i64>(2)? as usize;
             let saved = row.get::<_, i64>(4)? as usize;
@@ -715,6 +746,7 @@ impl Tracker {
 
     /// Get weekly statistics filtered by project path. // added
     pub fn get_by_week_filtered(&self, project_path: Option<&str>) -> Result<Vec<WeekStats>> {
+        let cutoff = history_cutoff_rfc3339();
         let (project_exact, project_glob) = project_filter_params(project_path); // added
         let mut stmt = self.conn.prepare(
             "SELECT
@@ -726,12 +758,13 @@ impl Tracker {
                 SUM(saved_tokens) as saved,
                 SUM(exec_time_ms) as total_time
              FROM commands
-             WHERE (?1 IS NULL OR project_path = ?1 OR project_path GLOB ?2)
+             WHERE timestamp >= ?1
+               AND (?2 IS NULL OR project_path = ?2 OR project_path GLOB ?3)
              GROUP BY week_start
              ORDER BY week_start DESC", // added: project filter
         )?;
 
-        let rows = stmt.query_map(params![project_exact, project_glob], |row| {
+        let rows = stmt.query_map(params![&cutoff, project_exact, project_glob], |row| {
             // added: params
             let input = row.get::<_, i64>(3)? as usize;
             let saved = row.get::<_, i64>(5)? as usize;
@@ -790,6 +823,7 @@ impl Tracker {
 
     /// Get monthly statistics filtered by project path. // added
     pub fn get_by_month_filtered(&self, project_path: Option<&str>) -> Result<Vec<MonthStats>> {
+        let cutoff = history_cutoff_rfc3339();
         let (project_exact, project_glob) = project_filter_params(project_path); // added
         let mut stmt = self.conn.prepare(
             "SELECT
@@ -800,12 +834,13 @@ impl Tracker {
                 SUM(saved_tokens) as saved,
                 SUM(exec_time_ms) as total_time
              FROM commands
-             WHERE (?1 IS NULL OR project_path = ?1 OR project_path GLOB ?2)
+             WHERE timestamp >= ?1
+               AND (?2 IS NULL OR project_path = ?2 OR project_path GLOB ?3)
              GROUP BY month
              ORDER BY month DESC", // added: project filter
         )?;
 
-        let rows = stmt.query_map(params![project_exact, project_glob], |row| {
+        let rows = stmt.query_map(params![&cutoff, project_exact, project_glob], |row| {
             // added: params
             let input = row.get::<_, i64>(2)? as usize;
             let saved = row.get::<_, i64>(4)? as usize;
@@ -871,17 +906,19 @@ impl Tracker {
         limit: usize,
         project_path: Option<&str>,
     ) -> Result<Vec<CommandRecord>> {
+        let cutoff = history_cutoff_rfc3339();
         let (project_exact, project_glob) = project_filter_params(project_path); // added
         let mut stmt = self.conn.prepare(
             "SELECT timestamp, rtk_cmd, saved_tokens, savings_pct
              FROM commands
-             WHERE (?1 IS NULL OR project_path = ?1 OR project_path GLOB ?2)
+             WHERE timestamp >= ?1
+               AND (?2 IS NULL OR project_path = ?2 OR project_path GLOB ?3)
              ORDER BY timestamp DESC
-             LIMIT ?3", // added: project filter
+             LIMIT ?4", // added: project filter
         )?;
 
         let rows = stmt.query_map(
-            params![project_exact, project_glob, limit as i64], // added: project params
+            params![&cutoff, project_exact, project_glob, limit as i64], // added: project params
             |row| {
                 Ok(CommandRecord {
                     timestamp: DateTime::parse_from_rfc3339(&row.get::<_, String>(0)?)
@@ -1365,5 +1402,13 @@ mod tests {
         // We can't assert exact rate because other tests may have added records,
         // but we can verify recovery_rate is between 0 and 100
         assert!(summary.recovery_rate >= 0.0 && summary.recovery_rate <= 100.0);
+    }
+
+    #[test]
+    fn test_effective_history_days_is_capped_at_ten() {
+        assert_eq!(effective_history_days(0), 1);
+        assert_eq!(effective_history_days(1), 1);
+        assert_eq!(effective_history_days(10), 10);
+        assert_eq!(effective_history_days(90), 10);
     }
 }

@@ -63,7 +63,7 @@ Project-scoped queries use GLOB patterns (not LIKE) to avoid `_`/`%` wildcard is
 ```toml
 [tracking]
 enabled = true
-history_days = 90
+history_days = 10                # 1-10 days, values above 10 are capped
 database_path = "/custom/path/to/tracking.db"  # Optional
 
 [display]

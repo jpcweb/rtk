@@ -7,7 +7,7 @@ Complete guide to analyzing your rtk token savings with temporal breakdowns and 
 The `rtk gain` command provides comprehensive analytics for tracking your token savings across time periods.
 
 **Database Location**: `~/.local/share/rtk/history.db`
-**Retention Policy**: 90 days
+**Retention Policy**: 10 days
 **Scope**: Global across all projects, worktrees, and Claude sessions
 
 ## Quick Reference
@@ -313,9 +313,9 @@ sqlite3 ~/.local/share/rtk/history.db .dump > rtk-backup.sql
 ### Cleanup
 
 ```bash
-# Manual cleanup (older than 90 days)
+# Manual cleanup (older than 10 days)
 sqlite3 ~/.local/share/rtk/history.db \
-  "DELETE FROM commands WHERE timestamp < datetime('now', '-90 days')"
+  "DELETE FROM commands WHERE timestamp < datetime('now', '-10 days')"
 
 # Reset all data
 rm ~/.local/share/rtk/history.db

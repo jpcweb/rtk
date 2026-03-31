@@ -167,7 +167,7 @@ rtk smart <fichier> [--model heuristic] [--force-download]
 ```
 $ rtk smart src/tracking.rs
 SQLite-based token tracking system for command executions.
-Records input/output tokens, savings %, execution times with 90-day retention.
+Records input/output tokens, savings %, execution times with 10-day retention.
 ```
 
 ---
@@ -1302,7 +1302,7 @@ rtk config --create       # Creer le fichier avec les valeurs par defaut
 ```toml
 [tracking]
 enabled = true              # Activer/desactiver le suivi
-history_days = 90           # Jours de retention (nettoyage automatique)
+history_days = 10           # Jours de retention (max 10)
 database_path = "/custom/path/tracking.db"  # Chemin personnalise (optionnel)
 
 [display]

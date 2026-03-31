@@ -150,7 +150,7 @@ Every command execution records metrics to SQLite (`~/.local/share/rtk/tracking.
 
 - Input tokens (raw output size) and output tokens (filtered size)
 - Savings percentage, execution time, project path
-- 90-day automatic retention cleanup
+- 10-day automatic retention cleanup
 - Token estimation: `ceil(chars / 4.0)` approximation
 
 Analytics commands (`rtk gain`, `rtk cc-economics`, `rtk session`) query this database to produce dashboards and ROI reports.

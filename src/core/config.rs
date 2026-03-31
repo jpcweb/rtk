@@ -40,7 +40,7 @@ impl Default for TrackingConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            history_days: 1,
+            history_days: 10,
             database_path: None,
         }
     }

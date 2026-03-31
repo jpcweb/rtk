@@ -17,7 +17,7 @@ Comprehensive documentation for RTK's token savings tracking system.
 RTK's tracking system records every command execution to provide analytics on token savings. The system:
 - Stores command history in SQLite (~/.local/share/rtk/tracking.db)
 - Tracks input/output tokens, savings percentage, and execution time
-- Automatically cleans up records older than 90 days
+- Automatically cleans up records older than 10 days
 - Provides aggregation APIs (daily/weekly/monthly)
 - Exports to JSON/CSV for external integrations
 
@@ -50,7 +50,7 @@ CLI output (rtk gain) or JSON/CSV export
 
 ### Data Retention
 
-Records older than **90 days** are automatically deleted on each write operation to prevent unbounded database growth.
+Records older than **10 days** are automatically deleted on each write operation to prevent unbounded database growth.
 
 ## Public API
 
@@ -502,7 +502,7 @@ CREATE INDEX idx_timestamp ON commands(timestamp);
 
 ### Automatic Cleanup
 
-On every write operation (`Tracker::record`), records older than 90 days are deleted:
+On every write operation (`Tracker::record`), records older than 10 days are deleted:
 
 ```rust
 fn cleanup_old(&self) -> Result<()> {
@@ -540,7 +540,7 @@ let _ = conn.execute(
 - **Local storage only**: Tracking database never leaves the machine
 - **No usage telemetry**: RTK does not send command history, command output, or aggregate usage data off the machine
 - **User control**: Users can delete `~/.local/share/rtk/tracking.db` anytime
-- **90-day retention**: Old data automatically purged
+- **10-day retention**: Old data automatically purged
 
 ## Troubleshooting
 
@@ -569,7 +569,7 @@ Token estimation uses `~4 chars = 1 token`. This is approximate. For precise cou
 Planned improvements (contributions welcome):
 
 - [ ] Export to Prometheus/OpenMetrics format
-- [ ] Support for custom retention periods (not just 90 days)
+- [ ] Support for custom retention periods above 10 days
 - [ ] SQLite WAL mode for concurrent writes
 - [ ] Per-project tracking (multiple databases)
 - [ ] Integration with Claude API for precise token counts
