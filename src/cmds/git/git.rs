@@ -1677,7 +1677,6 @@ mod tests {
     fn test_git_cmd_no_global_args() {
         let cmd = git_cmd(&[]);
         let program = cmd.get_program().to_string_lossy().to_string();
-        // On Windows, resolved_command returns full path (e.g. "C:\Program Files\Git\bin\git.exe")
         let basename = std::path::Path::new(&program)
             .file_stem()
             .unwrap()

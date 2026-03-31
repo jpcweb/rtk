@@ -23,8 +23,7 @@ Trigger: pull_request to develop or master
      ┌──────────────┐ ┌──────────────┐ ┌───────────┐ ┌──────────┐
      │ test         │ │Security Scan │ │ benchmark │ │ validate │
      │ ubuntu       │ │ cargo audit  │ │ >=80%     │ │ ai agent │
-     │ windows      │ │ (advisory)   │ │ savings   │ │ doc      │
-     │ macos        │ │              │ │           │ │          │
+     │ macos        │ │ (advisory)   │ │ savings   │ │ doc      │
      └──────┬───────┘ └──────┬───────┘ └─────┬─────┘ └────┬─────┘
             │                │               │             │
             └────────────────┴───────┬───────┴─────────────┘
@@ -61,7 +60,7 @@ Trigger: push to develop | workflow_dispatch (not master) | Concurrency: cancel-
               │
      ┌────────▼──────────────────┐
      │ Build                     │
-     │ 5 platforms + DEB + RPM   │
+     │ 4 platforms + DEB + RPM   │
      └────────┬──────────────────┘
               │
      ┌────────▼──────────────────┐
@@ -100,7 +99,7 @@ Trigger: push to master (only) | Concurrency: never cancelled
                                   │
                      ┌────────────▼────────────┐
                      │ Build                   │
-                     │ 5 platforms + DEB + RPM  │
+                     │ 4 platforms + DEB + RPM │
                      └────────────┬────────────┘
                                   │
                      ┌────────────▼────────────┐

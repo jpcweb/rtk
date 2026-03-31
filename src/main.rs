@@ -1,3 +1,6 @@
+#[cfg(target_os = "windows")]
+compile_error!("RTK supports only macOS and Linux.");
+
 mod analytics;
 mod cmds;
 mod core;

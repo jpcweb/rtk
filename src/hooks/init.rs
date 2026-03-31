@@ -867,7 +867,6 @@ fn run_default_mode(
     _install_opencode: bool,
 ) -> Result<()> {
     eprintln!("[warn] Hook-based mode requires Unix (macOS/Linux).");
-    eprintln!("    Windows: use --claude-md mode for full injection.");
     eprintln!("    Falling back to --claude-md mode.");
     run_claude_md_mode(_global, _verbose, _install_opencode)
 }

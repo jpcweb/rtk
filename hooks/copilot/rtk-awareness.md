@@ -9,7 +9,7 @@ It instructs Copilot to prefix commands with `rtk` automatically.
 
 The `.github/hooks/rtk-rewrite.json` hook adds a `PreToolUse` safety net via `rtk hook` —
 a cross-platform Rust binary that intercepts raw bash tool calls and rewrites them.
-No shell scripts, no `jq` dependency, works on Windows natively.
+No shell scripts and no `jq` dependency.
 
 ## Meta commands (always use directly)
 

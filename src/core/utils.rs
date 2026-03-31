@@ -306,13 +306,7 @@ pub fn package_manager_exec(tool: &str) -> Command {
     }
 }
 
-/// Resolve a binary name to its full path, honoring PATHEXT on Windows.
-///
-/// On Windows, Node.js tools are installed as `.CMD`/`.BAT`/`.PS1` shims.
-/// Rust's `std::process::Command::new()` does NOT honor PATHEXT, so
-/// `Command::new("vitest")` fails even when `vitest.CMD` is on PATH.
-///
-/// This function uses the `which` crate to perform proper PATH+PATHEXT resolution.
+/// Resolve a binary name to its full path using PATH lookup.
 ///
 /// # Arguments
 /// * `name` - Binary name (e.g., "vitest", "eslint", "tsc")
@@ -323,13 +317,10 @@ pub fn resolve_binary(name: &str) -> Result<PathBuf> {
     which::which(name).context(format!("Binary '{}' not found on PATH", name))
 }
 
-/// Create a `Command` with PATHEXT-aware binary resolution.
-///
-/// Drop-in replacement for `Command::new(name)` that works on Windows
-/// with `.CMD`/`.BAT`/`.PS1` wrappers.
+/// Create a `Command` with PATH-aware binary resolution.
 ///
 /// Falls back to `Command::new(name)` if resolution fails, so native
-/// commands (git, cargo) still work even if `which` can't find them.
+/// commands still work even if `which` can't find them.
 ///
 /// # Arguments
 /// * `name` - Binary name (e.g., "vitest", "eslint")
@@ -340,30 +331,17 @@ pub fn resolved_command(name: &str) -> Command {
     match resolve_binary(name) {
         Ok(path) => Command::new(path),
         Err(e) => {
-            // On Windows, resolution failure likely means a .CMD/.BAT wrapper
-            // wasn't found — always warn so users have a signal.
-            // On Unix, this is less common; only log in debug builds.
-            #[cfg(target_os = "windows")]
+            #[cfg(debug_assertions)]
             eprintln!(
                 "rtk: Failed to resolve '{}' via PATH, falling back to direct exec: {}",
                 name, e
             );
-            #[cfg(not(target_os = "windows"))]
-            {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "rtk: Failed to resolve '{}' via PATH, falling back to direct exec: {}",
-                    name, e
-                );
-            }
             Command::new(name)
         }
     }
 }
 
-/// Check if a tool exists on PATH (PATHEXT-aware on Windows).
-///
-/// Replaces manual `Command::new("which").arg(tool)` checks that fail on Windows.
+/// Check if a tool exists on PATH.
 pub fn tool_exists(name: &str) -> bool {
     which::which(name).is_ok()
 }
@@ -578,7 +556,6 @@ mod tests {
             .file_name()
             .expect("should have filename")
             .to_string_lossy();
-        // On Windows this could be "cargo.exe", on Unix just "cargo"
         assert!(
             filename.starts_with("cargo"),
             "resolved path filename should start with 'cargo', got: {}",
@@ -623,144 +600,4 @@ mod tests {
         assert!(tool_exists("git"), "tool_exists('git') should return true");
     }
 
-    // ===== Windows-specific PATHEXT resolution tests (issue #212) =====
-
-    #[cfg(target_os = "windows")]
-    mod windows_tests {
-        use super::super::*;
-        use std::fs;
-
-        /// Create a temporary .cmd wrapper to simulate Node.js tool installation
-        fn create_temp_cmd_wrapper(dir: &std::path::Path, name: &str) -> std::path::PathBuf {
-            let cmd_path = dir.join(format!("{}.cmd", name));
-            fs::write(&cmd_path, "@echo off\r\necho fake-tool-output\r\n")
-                .expect("failed to create .cmd wrapper");
-            cmd_path
-        }
-
-        /// Build a PATH string that includes the temp dir
-        fn path_with_dir(dir: &std::path::Path) -> std::ffi::OsString {
-            let original = std::env::var_os("PATH").unwrap_or_default();
-            let mut new_path = std::ffi::OsString::from(dir.as_os_str());
-            new_path.push(";");
-            new_path.push(&original);
-            new_path
-        }
-
-        #[test]
-        fn test_resolve_binary_finds_cmd_wrapper() {
-            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
-            create_temp_cmd_wrapper(temp_dir.path(), "fake-tool-test");
-
-            // Use which::which_in to avoid mutating global PATH (thread-safe)
-            let search_path = path_with_dir(temp_dir.path());
-            let result = which::which_in(
-                "fake-tool-test",
-                Some(search_path),
-                std::env::current_dir().unwrap(),
-            );
-
-            assert!(
-                result.is_ok(),
-                "which_in should find .cmd wrapper on Windows, got: {:?}",
-                result.err()
-            );
-
-            let path = result.unwrap();
-            let ext = path
-                .extension()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_lowercase();
-            assert!(
-                ext == "cmd" || ext == "bat",
-                "resolved path should have .cmd/.bat extension, got: {:?}",
-                path
-            );
-        }
-
-        #[test]
-        fn test_resolve_binary_finds_bat_wrapper() {
-            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
-            let bat_path = temp_dir.path().join("fake-bat-tool.bat");
-            fs::write(&bat_path, "@echo off\r\necho bat-output\r\n")
-                .expect("failed to create .bat wrapper");
-
-            let search_path = path_with_dir(temp_dir.path());
-            let result = which::which_in(
-                "fake-bat-tool",
-                Some(search_path),
-                std::env::current_dir().unwrap(),
-            );
-
-            assert!(
-                result.is_ok(),
-                "which_in should find .bat wrapper on Windows, got: {:?}",
-                result.err()
-            );
-        }
-
-        #[test]
-        fn test_resolved_command_executes_cmd_wrapper() {
-            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
-            create_temp_cmd_wrapper(temp_dir.path(), "fake-exec-test");
-
-            // Resolve the full path, then execute it directly (no PATH mutation)
-            let search_path = path_with_dir(temp_dir.path());
-            let resolved = which::which_in(
-                "fake-exec-test",
-                Some(search_path),
-                std::env::current_dir().unwrap(),
-            )
-            .expect("should resolve fake-exec-test");
-
-            let output = Command::new(&resolved).output();
-
-            assert!(
-                output.is_ok(),
-                "Command with resolved path should execute .cmd wrapper on Windows"
-            );
-            let output = output.unwrap();
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            assert!(
-                stdout.contains("fake-tool-output"),
-                "should get output from .cmd wrapper, got: {}",
-                stdout
-            );
-        }
-
-        #[test]
-        fn test_resolved_command_fallback_on_unknown_binary() {
-            // When resolve_binary fails, resolved_command should fall back to
-            // Command::new(name) instead of panicking.  On Windows this also
-            // prints a warning to stderr.
-            let mut cmd = resolved_command("nonexistent_binary_xyz_99999");
-            // The Command should be created (not panic).  Attempting to run it
-            // will fail, but that's expected — we just verify the fallback path
-            // produces a usable Command.
-            let result = cmd.output();
-            assert!(
-                result.is_err() || !result.unwrap().status.success(),
-                "nonexistent binary should fail to execute, but resolved_command must not panic"
-            );
-        }
-
-        #[test]
-        fn test_tool_exists_finds_cmd_wrapper() {
-            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
-            create_temp_cmd_wrapper(temp_dir.path(), "fake-exists-test");
-
-            let search_path = path_with_dir(temp_dir.path());
-            let result = which::which_in(
-                "fake-exists-test",
-                Some(search_path),
-                std::env::current_dir().unwrap(),
-            );
-
-            assert!(
-                result.is_ok(),
-                "which_in should find .cmd wrapper on Windows"
-            );
-        }
-    }
 }

@@ -47,7 +47,6 @@ CLI output (rtk gain) or JSON/CSV export
 
 - **Linux**: `~/.local/share/rtk/tracking.db`
 - **macOS**: `~/Library/Application Support/rtk/tracking.db`
-- **Windows**: `%APPDATA%\rtk\tracking.db`
 
 ### Data Retention
 

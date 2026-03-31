@@ -1008,7 +1008,7 @@ Overhead Sources:
 - **Performance**: ~5-15ms overhead per command (negligible for user experience)
 - **Safety**: No runtime errors from null pointers, data races, etc.
 - **Single Binary**: No runtime dependencies (distribute one executable)
-- **Cross-Platform**: Works on macOS, Linux, Windows without modification
+- **Single Binary**: Distributed as one executable for macOS and Linux
 
 ### Why SQLite for Tracking?
 

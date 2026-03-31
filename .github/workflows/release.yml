@@ -52,10 +52,6 @@ jobs:
             os: ubuntu-latest
             archive: tar.gz
             cross: true
-          # Windows
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            archive: zip
 
     steps:
       - name: Checkout
@@ -82,18 +78,10 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Package
         run: |
           cd target/${{ matrix.target }}/release
           tar -czvf ../../../rtk-${{ matrix.target }}.${{ matrix.archive }} rtk
-          cd ../../..
-
-      - name: Package (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          cd target/${{ matrix.target }}/release
-          7z a ../../../rtk-${{ matrix.target }}.${{ matrix.archive }} rtk.exe
           cd ../../..
 
       - name: Upload artifact
@@ -176,7 +164,7 @@ jobs:
       - name: Flatten artifacts
         run: |
           mkdir -p release
-          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.rpm" \) -exec cp {} release/ \;
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.deb" -o -name "*.rpm" \) -exec cp {} release/ \;
 
       - name: Create version-agnostic package names
         run: |

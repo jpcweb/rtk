@@ -85,7 +85,8 @@ cargo install --git https://github.com/rtk-ai/rtk
 Download from [releases](https://github.com/rtk-ai/rtk/releases):
 - macOS: `rtk-x86_64-apple-darwin.tar.gz` / `rtk-aarch64-apple-darwin.tar.gz`
 - Linux: `rtk-x86_64-unknown-linux-musl.tar.gz` / `rtk-aarch64-unknown-linux-gnu.tar.gz`
-- Windows: `rtk-x86_64-pc-windows-msvc.zip`
+
+Windows is no longer supported or distributed.
 
 ### Verify Installation
 

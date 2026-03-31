@@ -1,5 +1,7 @@
 # RTK Installation Guide - For AI Coding Assistants
 
+RTK supports macOS and Linux. Windows is not supported.
+
 ## ⚠️ Name Collision Warning
 
 **There are TWO completely different projects named "rtk":**
