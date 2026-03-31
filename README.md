@@ -297,7 +297,7 @@ After install, **restart Claude Code**.
 
 ## Supported AI Tools
 
-RTK supports 10 AI coding tools. Each integration transparently rewrites shell commands to `rtk` equivalents for 60-90% token savings.
+RTK supports 9 AI coding tools. Each integration transparently rewrites shell commands to `rtk` equivalents for 60-90% token savings.
 
 | Tool | Install | Method |
 |------|---------|--------|
@@ -310,7 +310,6 @@ RTK supports 10 AI coding tools. Each integration transparently rewrites shell c
 | **Windsurf** | `rtk init --agent windsurf` | .windsurfrules (project-scoped) |
 | **Cline / Roo Code** | `rtk init --agent cline` | .clinerules (project-scoped) |
 | **OpenCode** | `rtk init -g --opencode` | Plugin TS (tool.execute.before) |
-| **OpenClaw** | `openclaw plugins install ./openclaw` | Plugin TS (before_tool_call) |
 | **Mistral Vibe** | Planned (#800) | Blocked on upstream BeforeToolCallback |
 
 ### Claude Code (default)
@@ -382,14 +381,6 @@ rtk init -g --opencode
 ```
 
 Creates `~/.config/opencode/plugins/rtk.ts`. Uses `tool.execute.before` hook.
-
-### OpenClaw
-
-```bash
-openclaw plugins install ./openclaw
-```
-
-Plugin in `openclaw/` directory. Uses `before_tool_call` hook, delegates to `rtk rewrite`.
 
 ### Mistral Vibe (planned)
 
