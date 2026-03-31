@@ -470,27 +470,11 @@ brew uninstall rtk           # If installed via Homebrew
 - **[SECURITY.md](SECURITY.md)** - Security policy and PR review process
 - **[AUDIT_GUIDE.md](docs/AUDIT_GUIDE.md)** - Token savings analytics guide
 
-## Privacy & Telemetry
+## Privacy
 
-RTK collects **anonymous, aggregate usage metrics** once per day, **enabled by default**. This helps prioritize development. See opt-out options below.
+RTK keeps its tracking data on your machine to power local commands like `rtk gain`. It does not send usage telemetry or upload command output.
 
-**What is collected:**
-- Device hash (salted SHA-256 — per-user random salt stored locally, not reversible)
-- RTK version, OS, architecture
-- Command count (last 24h) and top command names (e.g. "git", "cargo" — no arguments, no file paths)
-- Token savings percentage
-
-**What is NOT collected:** source code, file paths, command arguments, secrets, environment variables, or any personally identifiable information.
-
-**Opt-out** (any of these):
-```bash
-# Environment variable
-export RTK_TELEMETRY_DISABLED=1
-
-# Or in config file (~/.config/rtk/config.toml)
-[telemetry]
-enabled = false
-```
+Source code, file paths, command arguments, secrets, and environment variables are not transmitted by RTK.
 
 ## Contributing
 

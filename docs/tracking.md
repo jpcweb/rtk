@@ -539,7 +539,7 @@ let _ = conn.execute(
 ## Security & Privacy
 
 - **Local storage only**: Tracking database never leaves the machine
-- **Telemetry enabled by default**: RTK sends a daily anonymous usage ping (version, OS, command counts, token savings). Device identity is a salted SHA-256 hash. Opt out with `RTK_TELEMETRY_DISABLED=1` or `[telemetry] enabled = false` in `~/.config/rtk/config.toml`
+- **No usage telemetry**: RTK does not send command history, command output, or aggregate usage data off the machine
 - **User control**: Users can delete `~/.local/share/rtk/tracking.db` anytime
 - **90-day retention**: Old data automatically purged
 
