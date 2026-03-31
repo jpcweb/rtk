@@ -24,7 +24,6 @@ src/
 │   ├── filter.rs              ← Language-aware code filtering engine
 │   ├── toml_filter.rs         ← TOML DSL filter engine
 │   ├── display_helpers.rs     ← Terminal formatting helpers
-│   └── telemetry.rs           ← Analytics ping
 ├── hooks/                     ← Hook system
 │   ├── init.rs                ← rtk init command
 │   ├── rewrite_cmd.rs         ← rtk rewrite command
@@ -51,7 +50,7 @@ src/
 ├── discover/                  ← Claude Code history analysis
 ├── learn/                     ← CLI correction detection
 ├── parser/                    ← Parser infrastructure
-└── filters/                   ← 60 TOML filter configs
+└── filters/                   ← Built-in TOML filter definitions
 ```
 
 ## Common Search Patterns
@@ -128,21 +127,22 @@ Glob pattern="tests/fixtures/*.txt"
 
 ### Tracking/metrics issues
 
-1. `src/core/tracking.rs` → `track_command()` function
-2. `src/core/config.rs` → `tracking.database_path` field
-3. `RTK_DB_PATH` env var overrides config
+1. `src/core/tracking.rs` → `TimedExecution`, `Tracker`, `track()` / `track_passthrough()`
+2. `src/core/config.rs` → `tracking.history_days` and `tracking.database_path`
+3. Parse fallback metrics → `record_parse_failure_silent()`
 
 ### Configuration issues
 
-1. `src/core/config.rs` → `RtkConfig` struct
+1. `src/core/config.rs` → `Config` struct
 2. `src/hooks/init.rs` → `rtk init` command
 3. Config file: `~/.config/rtk/config.toml`
-4. Filter files: `~/.config/rtk/filters/` (global) or `.rtk/filters/` (project)
+4. Filter files: `~/.config/rtk/filters.toml` (global) or `.rtk/filters.toml` (project)
 
 ## TOML Filter DSL Navigation
 
 ```
-Glob pattern=".rtk/filters/*.toml"         # Project-local filters
+Glob pattern=".rtk/filters.toml"           # Project-local filter file
+Glob pattern="src/filters/*.toml"          # Built-in filter definitions
 Glob pattern="src/core/toml_filter.rs"     # TOML filter engine
 Grep pattern="FilterRule\|FilterConfig" type="rust"
 ```

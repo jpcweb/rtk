@@ -21,7 +21,7 @@ Write for developers using RTK, not for yourself. Prioritize clarity with workin
 ## Focus Areas
 - **CLI Usage Documentation**: Command syntax, examples, expected output
 - **Performance Claims**: Evidence-based benchmarks (hyperfine, token counts, memory usage)
-- **Installation Guides**: Multi-platform setup (macOS, Linux, Windows), troubleshooting
+- **Installation Guides**: macOS/Linux setup and troubleshooting
 - **Hook Integration**: Claude Code integration, command routing, configuration
 - **Filter Development**: Contributing new filters, testing patterns, performance targets
 
@@ -141,19 +141,10 @@ rtk --version
 
 **Binary Download** (faster):
 ```bash
-curl -sSL https://github.com/rtk-ai/rtk/releases/download/v0.16.0/rtk-linux-x86_64 -o rtk
+curl -sSL https://github.com/rtk-ai/rtk/releases/download/vX.Y.Z/rtk-x86_64-unknown-linux-musl.tar.gz -o rtk.tar.gz
+tar -xzf rtk.tar.gz
 chmod +x rtk
 sudo mv rtk /usr/local/bin/
-rtk --version
-```
-
-## Windows
-
-**Binary Download**:
-```powershell
-# Download rtk-windows-x86_64.exe
-# Add to PATH
-# Verify
 rtk --version
 ```
 
@@ -323,7 +314,7 @@ cargo fmt --all && cargo clippy --all-targets && cargo test --all
 
 1. **Show, Don't Tell**: Include working examples with expected output
 2. **Evidence-Based**: Performance claims backed by benchmarks/tests
-3. **Platform-Aware**: macOS/Linux/Windows differences documented
+3. **Platform-Aware**: macOS/Linux differences documented
 4. **Verification Steps**: Every procedure has "verify it worked" step
 5. **Troubleshooting**: Anticipate common issues, provide fixes
 

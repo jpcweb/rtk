@@ -342,11 +342,11 @@ chmod +x .claude/hooks/*.sh
 | v0.16.x     | ✅ Yes   | ✅ Yes       | ✅ Yes            | **Recommended** |
 | main branch | ✅ Yes   | ✅ Yes       | ✅ Yes            | Latest features |
 
-**Upgrade recommendation**: If running v0.15.x or older, upgrade to v0.16.x:
+**Upgrade recommendation**: If running v0.15.x or older, upgrade to the latest version from the repo default branch:
 
 ```bash
-cd /Users/florianbruniaux/Sites/rtk-ai/rtk
-git pull origin main
+cd /path/to/rtk
+git pull --ff-only
 cargo install --path . --force
-rtk --version  # Should show 0.16.x or newer
+rtk --version  # Should show a recent version
 ```

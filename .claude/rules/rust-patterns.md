@@ -44,6 +44,7 @@ fn read_config(path: &Path) -> Config {
 
 ```rust
 pub fn run(args: MyArgs) -> Result<()> {
+    let timer = tracking::TimedExecution::start();
     let output = execute_command("mycmd", &args.to_cmd_args())
         .context("Failed to execute mycmd")?;
 
@@ -53,8 +54,8 @@ pub fn run(args: MyArgs) -> Result<()> {
             output.stdout.clone()  // Passthrough on failure
         });
 
-    tracking::record("mycmd", &output.stdout, &filtered)?;
     print!("{}", filtered);
+    timer.track("mycmd args", "rtk mycmd args", &output.stdout, &filtered);
 
     if !output.status.success() {
         std::process::exit(output.status.code().unwrap_or(1));

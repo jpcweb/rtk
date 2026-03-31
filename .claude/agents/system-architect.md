@@ -41,7 +41,7 @@ src/main.rs
 │   └── Proxy(ProxyArgs)  → passthrough
 │
 ├── core/
-│   ├── tracking.rs       ← SQLite, token metrics, 90-day retention
+│   ├── tracking.rs       ← SQLite, token metrics, 10-day retention cap
 │   ├── config.rs         ← ~/.config/rtk/config.toml
 │   ├── tee.rs            ← Raw output recovery on failure
 │   ├── filter.rs         ← Language-aware code filtering
@@ -52,8 +52,8 @@ src/main.rs
 
 **TOML Filter DSL** (v0.25.0+):
 ```
-~/.config/rtk/filters/    ← User-global filters
-<project>/.rtk/filters/   ← Project-local filters (shadow warning)
+~/.config/rtk/filters.toml  ← User-global filters
+<project>/.rtk/filters.toml ← Project-local filters (trust-gated)
 ```
 
 ## Architectural Patterns (RTK Idioms)
@@ -67,6 +67,7 @@ pub struct NewArgs {
 }
 
 pub fn run(args: NewArgs) -> Result<()> {
+    let timer = tracking::TimedExecution::start();
     let output = execute_command("cmd", &args.to_cmd_args())
         .context("Failed to execute cmd")?;
 
@@ -77,10 +78,8 @@ pub fn run(args: NewArgs) -> Result<()> {
             output.stdout.clone() // Fallback: passthrough
         });
 
-    // Track
-    tracking::record("cmd", &output.stdout, &filtered)?;
-
     print!("{}", filtered);
+    timer.track("cmd args", "rtk cmd args", &output.stdout, &filtered);
 
     // Propagate exit code
     if !output.status.success() {
@@ -113,11 +112,10 @@ Prefer sub-enum over flat args when:
 
 For simple output transformations without a full Rust module:
 ```toml
-# .rtk/filters/my-cmd.toml
-[filter]
-command = "my-cmd"
+# .rtk/filters.toml
+[filters.my-cmd]
+match_command = "^my-cmd\\b"
 strip_lines_matching = ["^Verbose:", "^Debug:"]
-keep_lines_matching = ["^error", "^warning"]
 max_lines = 50
 ```
 

@@ -248,7 +248,7 @@ rg "format!.*\{.*Command" --type rust src/
 
 ### Shell Escaping (🔴 Critical)
 
-- [ ] **Platform-specific**: Test escaping on macOS, Linux, Windows
+- [ ] **Platform-specific**: Test escaping on macOS and Linux
 - [ ] **Special chars**: Handle `;`, `|`, `&`, `$`, `` ` ``, `\`, `"`, `'`, `\n`
 - [ ] **Use shell-escape crate**: Don't roll your own escaping
 - [ ] **Cross-platform tests**: `#[cfg(target_os = "...")]` tests

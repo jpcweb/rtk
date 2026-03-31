@@ -87,7 +87,7 @@ version = "0.17.0"  # New version
 - Integration with `uv` package manager auto-detection
 
 ### Fixed
-- Shell escaping for PowerShell on Windows
+- Shell escaping issue in Unix shell handling
 - Memory leak in regex pattern caching
 
 ### Changed
@@ -153,7 +153,7 @@ Performance: <10ms startup, <5MB memory"
 
 ```bash
 # Push commit and tags
-git push origin main
+git push origin <default-branch>
 git push origin v0.17.0
 
 # Trigger GitHub Actions release workflow
@@ -180,14 +180,15 @@ gh release view v0.17.0
 
 # Should show:
 # - Release notes from git tag
-# - Binaries attached (macOS, Linux x86_64/ARM64, Windows)
+# - Binaries attached (macOS and Linux)
 # - Checksums for verification
 ```
 
 ### 3. Installation Verification
 ```bash
 # Test installation from release
-curl -sSL https://github.com/rtk-ai/rtk/releases/download/v0.17.0/rtk-macos-latest -o rtk
+curl -sSL https://github.com/rtk-ai/rtk/releases/download/v0.17.0/rtk-x86_64-apple-darwin.tar.gz -o rtk.tar.gz
+tar -xzf rtk.tar.gz
 chmod +x rtk
 ./rtk --version
 # Should show v0.17.0
@@ -230,7 +231,7 @@ gh release delete v0.17.0 --yes
 
 # Revert commit
 git revert HEAD
-git push origin main
+git push origin <default-branch>
 ```
 
 ## Automated Release Script (Optional)
@@ -283,7 +284,9 @@ git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
 
 # 7. Push
 echo "🚢 Pushing to remote..."
-git push origin main
+DEFAULT_BRANCH=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+[ -n "$DEFAULT_BRANCH" ] || DEFAULT_BRANCH=$(git branch --show-current)
+git push origin "$DEFAULT_BRANCH"
 git push origin "v$NEW_VERSION"
 
 echo "✅ Release v$NEW_VERSION shipped!"
@@ -328,11 +331,11 @@ v0.15.0
 **Solution**:
 ```bash
 # Fix issue locally
-git checkout main
+git checkout <default-branch>
 # Apply fix
 cargo test --all
 git commit -m "fix: CI/CD build issue"
-git push origin main
+git push origin <default-branch>
 
 # Delete old tag
 git tag -d v0.17.0

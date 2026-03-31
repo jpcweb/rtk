@@ -1,6 +1,6 @@
 ---
 name: debugger
-description: Use this agent when encountering errors, test failures, unexpected behavior, or when RTK doesn't work as expected. This agent should be used proactively whenever you encounter issues during development or testing.\n\nExamples:\n\n<example>\nContext: User encounters filter parsing error.\nuser: "The git log filter is crashing on certain commit messages"\nassistant: "I'm going to use the debugger agent to investigate this parsing error."\n<commentary>\nSince there's an error in filter logic, use the debugger agent to perform root cause analysis and provide a fix.\n</commentary>\n</example>\n\n<example>\nContext: Tests fail after filter modification.\nuser: "Token savings tests are failing after I updated the cargo test filter"\nassistant: "Let me use the debugger agent to analyze these test failures and identify the regression."\n<commentary>\nTest failures require systematic debugging to identify the root cause and fix the issue.\n</commentary>\n</example>\n\n<example>\nContext: Performance regression detected.\nuser: "RTK startup time increased to 25ms after adding lazy_static regex"\nassistant: "I'm going to use the debugger agent to profile the performance regression."\n<commentary>\nPerformance problems require systematic debugging with profiling tools (flamegraph, hyperfine).\n</commentary>\n</example>\n\n<example>\nContext: Shell escaping bug on Windows.\nuser: "Git commands work on macOS but fail on Windows with shell escaping errors"\nassistant: "Let me launch the debugger agent to investigate this cross-platform shell escaping issue."\n<commentary>\nCross-platform bugs require platform-specific debugging and testing.\n</commentary>\n</example>
+description: Use this agent for RTK errors, test failures, regressions, and unexpected behavior during development or testing.
 model: sonnet
 color: red
 permissionMode: ask
@@ -85,7 +85,6 @@ hyperfine 'git stash && cargo build --release && target/release/rtk <cmd>' \
 # Test on different platforms
 cargo test --test shell_escaping  # macOS
 docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test --test shell_escaping  # Linux
-# Windows: Trust CI or test manually
 ```
 
 ### 3. Form and Test Hypotheses
@@ -96,7 +95,7 @@ docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test --test shell_escap
 |---------|--------------|-----------------|
 | Filter crashes | Regex panic on malformed input | Add test with empty/malformed fixture |
 | Performance regression | Regex recompiled at runtime | Check flamegraph for `Regex::new()` calls |
-| Shell escaping error | Platform-specific quoting | Test on macOS + Linux + Windows |
+| Shell escaping error | zsh/bash quoting difference | Test on macOS + Linux |
 | Token savings <60% | Weak condensation logic | Review filter algorithm, compare fixtures |
 | Test failure | Fixture outdated or test assertion wrong | Update fixture from real command output |
 
@@ -346,9 +345,6 @@ cargo test --test shell_escaping
 
 # Linux (Docker)
 docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test --test shell_escaping
-
-# Windows (CI or manual)
-# Check .github/workflows/ci.yml results
 ```
 
 ## Output Format
@@ -412,7 +408,7 @@ For each debugging session, provide:
 **Common issues**:
 | Issue | Symptom | Root Cause | Fix |
 |-------|---------|-----------|-----|
-| Works on macOS, fails Windows | Shell injection or error | Platform-specific escaping | Use `#[cfg(target_os)]` for escaping |
+| Works on macOS, fails Linux | Shell injection or error | zsh/bash escaping mismatch | Prefer `Command::args()` or Unix-safe escaping |
 | Special chars break command | Command execution error | No escaping | Use `Command::args()` not shell string |
 | Quotes not handled | Mangled arguments | Wrong quote escaping | Use `shell_escape::escape()` |
 

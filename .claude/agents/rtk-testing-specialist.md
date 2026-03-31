@@ -140,12 +140,9 @@ gh pr view 123 > tests/fixtures/gh_pr_view_raw.txt
 
 ### Cross-Platform Shell Escaping
 
-RTK must work on macOS (zsh), Linux (bash), Windows (PowerShell). Shell escaping differs:
+RTK supports macOS (zsh) and Linux (bash). Shell behavior still differs, so escaping tests must cover both.
 
 ```rust
-#[cfg(target_os = "windows")]
-const EXPECTED_SHELL: &str = "cmd.exe";
-
 #[cfg(target_os = "macos")]
 const EXPECTED_SHELL: &str = "zsh";
 
@@ -157,10 +154,7 @@ fn test_shell_escaping() {
     let cmd = r#"git log --format="%H %s""#;
     let escaped = escape_for_shell(cmd);
 
-    #[cfg(target_os = "windows")]
-    assert_eq!(escaped, r#"git log --format=\"%H %s\""#);
-
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     assert_eq!(escaped, r#"git log --format="%H %s""#);
 }
 
@@ -180,7 +174,6 @@ fn test_command_execution_cross_platform() {
 **Testing platforms**:
 - **macOS**: `cargo test` (local)
 - **Linux**: `docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test`
-- **Windows**: Trust CI/CD or test manually if available
 
 ### Integration Tests (Real Commands)
 
@@ -243,7 +236,7 @@ cargo test --ignored test_real_git_log
 **Coverage goals**:
 - **100% filter coverage**: Every filter has snapshot test + token accuracy test
 - **95% token savings verification**: Fixtures with known savings (60-90%)
-- **Cross-platform tests**: macOS + Linux (Windows in CI only)
+- **Cross-platform tests**: macOS + Linux
 
 **Coverage verification**:
 
@@ -289,7 +282,7 @@ docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test
 - Create fixtures: `git log -20 > tests/fixtures/git_log_raw.txt`
 - Then test: `include_str!("../tests/fixtures/git_log_raw.txt")`
 
-❌ **DON'T** skip cross-platform tests → macOS ≠ Linux ≠ Windows
+❌ **DON'T** skip supported-platform tests → macOS ≠ Linux
 - Shell escaping differs
 - Path separators differ
 - Line endings differ
@@ -316,8 +309,8 @@ docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test
 - Assert `savings >= 60.0`
 
 ✅ **DO** test shell escaping on all platforms
-- Use `#[cfg(target_os = "...")]` for platform-specific tests
-- Test macOS, Linux, Windows (via CI)
+- Use `#[cfg(target_os = "...")]` for macOS/Linux-specific tests when needed
+- Test macOS and Linux before release
 
 ✅ **DO** run integration tests before release
 - Install RTK: `cargo install --path .`

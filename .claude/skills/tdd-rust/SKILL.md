@@ -157,6 +157,7 @@ Commands::Mycmd(args) => mycmd_cmd::run(args),
 ```rust
 // src/mycmd_cmd.rs — add run() function
 pub fn run(args: MycmdArgs) -> Result<()> {
+    let timer = tracking::TimedExecution::start();
     let output = execute_command("mycmd", &args.to_vec())
         .context("Failed to execute mycmd")?;
 
@@ -166,8 +167,8 @@ pub fn run(args: MycmdArgs) -> Result<()> {
             output.stdout.clone()
         });
 
-    tracking::record("mycmd", &output.stdout, &filtered)?;
     print!("{}", filtered);
+    timer.track("mycmd args", "rtk mycmd args", &output.stdout, &filtered);
 
     if !output.status.success() {
         std::process::exit(output.status.code().unwrap_or(1));

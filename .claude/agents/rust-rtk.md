@@ -15,7 +15,7 @@ You are an expert Rust developer specializing in the RTK codebase architecture.
 - **Filter development**: Regex-based condensation, token counting, format preservation
 - **Performance optimization**: Zero-overhead design, lazy_static regex, minimal allocations
 - **Error handling**: anyhow for CLI binary, graceful fallback on filter failures
-- **Cross-platform**: macOS/Linux/Windows shell compatibility (bash/zsh/PowerShell)
+- **Platform scope**: macOS/Linux shell compatibility (zsh/bash)
 
 ## Critical RTK Patterns
 
@@ -128,18 +128,11 @@ mod tests {
 
 **Why**: Token savings claims (60-90%) must be **verifiable**. Tests with real fixtures prevent regressions. If savings drop below 60%, it's a release blocker.
 
-### Cross-Platform Shell Escaping
+### Platform Scope and Shell Escaping
 
-RTK must work on macOS (zsh), Linux (bash), Windows (PowerShell). Shell escaping differs:
+RTK supports macOS (zsh) and Linux (bash). Prefer `Command::args()` and Unix-safe escaping only when a shell string is unavoidable.
 
 ```rust
-#[cfg(target_os = "windows")]
-fn escape_arg(arg: &str) -> String {
-    // PowerShell escaping: wrap in quotes, escape inner quotes
-    format!("\"{}\"", arg.replace('"', "`\""))
-}
-
-#[cfg(not(target_os = "windows"))]
 fn escape_arg(arg: &str) -> String {
     // Bash/zsh escaping: escape special chars
     shell_escape::escape(arg.into()).into()
@@ -153,23 +146,14 @@ mod tests {
     fn test_shell_escaping() {
         let arg = r#"git log --format="%H %s""#;
         let escaped = escape_arg(arg);
-
-        #[cfg(target_os = "windows")]
-        assert_eq!(escaped, r#""git log --format=`"%H %s`"""#);
-
-        #[cfg(target_os = "macos")]
-        assert_eq!(escaped, r#"git log --format="%H %s""#);
-
-        #[cfg(target_os = "linux")]
-        assert_eq!(escaped, r#"git log --format="%H %s""#);
+        assert_eq!(escaped, r#"'git log --format="%H %s"'"#);
     }
 }
 ```
 
-**Testing**: Run tests on all platforms:
+**Testing**: Run tests on supported platforms:
 - macOS: `cargo test` (local)
 - Linux: `docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test`
-- Windows: Trust CI/CD or test manually if available
 
 ### Error Handling (Critical)
 
@@ -360,9 +344,8 @@ hyperfine 'rtk git log -10' 'git log -10'         # Benchmark startup
 /usr/bin/time -l rtk git status                   # Memory usage (macOS)
 cargo flamegraph -- rtk git log -10               # Flamegraph profiling
 
-# Cross-platform testing
-cargo test --target x86_64-pc-windows-gnu         # Windows
-cargo test --target x86_64-unknown-linux-gnu      # Linux
+# Supported-platform testing
+cargo test                                        # macOS/Linux local
 docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test  # Linux via Docker
 ```
 
@@ -385,8 +368,8 @@ docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test  # Linux via Docke
 - Command output changes across versions
 - Use flexible regex patterns, test with real fixtures
 
-❌ **DON'T** skip cross-platform testing → macOS ≠ Linux ≠ Windows
-- Shell escaping differs: bash/zsh vs PowerShell
+❌ **DON'T** skip supported-platform testing → macOS ≠ Linux
+- Shell behavior still differs: zsh vs bash
 - Test on macOS + Linux (Docker) minimum
 
 ❌ **DON'T** break pipe compatibility → `rtk git status | grep modified` must work
@@ -396,7 +379,7 @@ docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test  # Linux via Docke
 ✅ **DO** provide fallback to raw command on filter failure
 ✅ **DO** compile regex once with `lazy_static!`
 ✅ **DO** verify token savings claims in tests (≥60%)
-✅ **DO** test on macOS + Linux + Windows (via CI or manual)
+✅ **DO** test on macOS + Linux before release
 ✅ **DO** run `cargo fmt && cargo clippy && cargo test` before commit
 ✅ **DO** benchmark startup time with `hyperfine` (<10ms target)
 ✅ **DO** use `anyhow::Result` with `.context()` for all error propagation

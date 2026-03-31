@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Use this agent when you need comprehensive code quality assurance, security vulnerability detection, or performance optimization analysis. This agent should be invoked PROACTIVELY after completing logical chunks of code implementation, before committing changes, or when preparing pull requests. Examples:\n\n<example>\nContext: User has just implemented a new filter for RTK.\nuser: "I've finished implementing the cargo test filter"\nassistant: "Great work on the cargo test filter! Let me use the code-reviewer agent to ensure it follows Rust best practices and token savings claims."\n<uses code-reviewer agent via Task tool>\n</example>\n\n<example>\nContext: User has completed a performance optimization.\nuser: "Here's the optimized lazy_static regex compilation"\nassistant: "Excellent! Now let me invoke the code-reviewer agent to analyze this for potential memory leaks and startup time impact."\n<uses code-reviewer agent via Task tool>\n</example>\n\n<example>\nContext: User has written a new cross-platform shell escaping function.\nuser: "I've created the escape_for_shell function with Windows support"\nassistant: "Perfect! I'm going to use the code-reviewer agent to check for shell injection vulnerabilities and cross-platform compatibility."\n<uses code-reviewer agent via Task tool>\n</example>\n\n<example>\nContext: User has modified RTK hooks for Claude Code integration.\nuser: "Updated the rtk-rewrite.sh hook"\nassistant: "Important changes! Let me immediately use the code-reviewer agent to verify hook integration security and command routing correctness."\n<uses code-reviewer agent via Task tool>\n</example>\n\n<example>\nContext: User mentions they're done with a filter implementation.\nuser: "The git log filter is complete"\nassistant: "Excellent progress! Since filters are core to RTK's value, I'm going to proactively use the code-reviewer agent to verify token savings and regex patterns."\n<uses code-reviewer agent via Task tool>\n</example>
+description: Use this agent for RTK code quality, security review, and performance analysis before committing or opening a PR.
 model: sonnet
 color: red
 ---
@@ -79,10 +79,10 @@ Raise alarms immediately when you see:
 - Truncation strategy: consistent across filters
 
 **Cross-Platform:**
-- Shell escaping: bash/zsh vs PowerShell
+- Shell escaping: bash vs zsh
 - Path separators in output parsing
-- CRLF handling in Windows test fixtures
-- ANSI codes: present in macOS/Linux, absent in Windows CI
+- Newline handling in generated fixtures
+- ANSI codes may differ between macOS and Linux terminals
 
 **Filter Architecture:**
 - Fallback pattern: filter error → execute raw command unchanged
@@ -230,7 +230,7 @@ Both paths MUST have tests.
 2. **Fallback**: If the filter panics, does the user still get their command output?
 3. **Startup**: Does this change add any I/O or initialization before the command runs?
 4. **Exit code**: If the underlying command returns non-zero, does RTK propagate it?
-5. **Cross-platform**: Will this regex work on Windows CRLF output?
+5. **Cross-platform**: Will this regex work on macOS/Linux output and line endings?
 6. **ANSI**: Does the filter handle ANSI escape codes in input?
 7. **Fixture**: Is the test using real output from the actual command?
 8. **Call sites**: Have ALL callers been traced? Does each input variant have a test?

@@ -14,7 +14,7 @@ Review locale de la branche courante avant création de PR. Applique les critèr
 ```bash
 /tech:codereview              # 🔴 + 🟡 uniquement (compact)
 /tech:codereview --verbose    # + points positifs + 🟢 détaillées
-/tech:codereview main         # Review vs main (défaut: master)
+/tech:codereview main         # Review vs main (sinon branche par défaut détectée)
 /tech:codereview --staged     # Seulement fichiers staged
 /tech:codereview --auto       # Review + fix loop
 /tech:codereview --auto --max 5
@@ -25,12 +25,24 @@ Arguments: $ARGUMENTS
 ## Étape 1: Récupérer le contexte
 
 ```bash
+detect_default_branch() {
+  if remote_head=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null); then
+    printf '%s\n' "${remote_head#origin/}"
+  elif git show-ref --verify --quiet refs/heads/main; then
+    printf 'main\n'
+  elif git show-ref --verify --quiet refs/heads/master; then
+    printf 'master\n'
+  else
+    git branch --show-current
+  fi
+}
+
 # Parse arguments
 VERBOSE=false
 AUTO_MODE=false
 MAX_ITERATIONS=3
 STAGED=false
-BASE_BRANCH="master"
+BASE_BRANCH="$(detect_default_branch)"
 
 set -- "$ARGUMENTS"
 while [[ $# -gt 0 ]]; do
@@ -63,7 +75,7 @@ git diff "$BASE_BRANCH"...HEAD --stat
 | `src/core/tracking.rs`         | SQLite patterns + DB path config           |
 | `src/core/config.rs`           | Configuration system                       |
 | `src/hooks/init.rs`            | Init patterns + hook installation          |
-| `.github/workflows/`           | CI/CD multi-platform build targets         |
+| `.github/workflows/`           | CI/CD build targets macOS/Linux            |
 | `tests/` ou `fixtures/`        | Testing Strategy (CLAUDE.md)               |
 | `Cargo.toml`                   | Dependencies + build optimizations         |
 
@@ -243,7 +255,7 @@ Glob tests/fixtures/<cmd>_raw.txt
 - Ne pas modifier : `Cargo.lock`, `.env*`, `*secret*`
 - Si >5 fichiers modifiés → demander confirmation
 - Quality gate : `cargo fmt --all && cargo clippy --all-targets && cargo test`
-- Si quality gate fail → `git reset --hard HEAD` + reporter les erreurs
+- Si quality gate fail → arrêter l'auto-fix et reporter les erreurs, sans rollback destructif
 - Commit atomique par passage : `autofix(codereview): fix unwrap + lazy_static`
 
 ## Workflow recommandé
@@ -255,5 +267,5 @@ Glob tests/fixtures/<cmd>_raw.txt
    OU
 3b. /tech:codereview --auto → fix automatique
 4. /tech:codereview → vérifier READY
-5. gh pr create --base master
+5. gh pr create --base <default-branch>
 ```

@@ -132,14 +132,11 @@ pnpm list > tests/fixtures/pnpm_list_raw.txt
 
 **Priority**: 🔴 **Triggers**: Shell escaping changes, command execution logic
 
-RTK must work on macOS (zsh), Linux (bash), Windows (PowerShell). Shell escaping differs.
+RTK supports macOS (zsh) and Linux (bash). Shell escaping still differs across supported platforms.
 
 ### Platform-Specific Tests
 
 ```rust
-#[cfg(target_os = "windows")]
-const EXPECTED_SHELL: &str = "cmd.exe";
-
 #[cfg(target_os = "macos")]
 const EXPECTED_SHELL: &str = "zsh";
 
@@ -151,10 +148,7 @@ fn test_shell_escaping() {
     let cmd = r#"git log --format="%H %s""#;
     let escaped = escape_for_shell(cmd);
 
-    #[cfg(target_os = "windows")]
-    assert_eq!(escaped, r#"git log --format=\"%H %s\""#);
-
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     assert_eq!(escaped, r#"git log --format="%H %s""#);
 }
 ```
@@ -171,16 +165,12 @@ cargo test  # Local testing
 docker run --rm -v $(pwd):/rtk -w /rtk rust:latest cargo test
 ```
 
-**Windows (via CI)**:
-Trust GitHub Actions CI/CD pipeline or test manually if Windows machine available.
-
 ### Shell Differences
 
 | Platform | Shell | Quote Escape | Path Sep |
 |----------|-------|--------------|----------|
 | macOS | zsh | `'single'` or `"double"` | `/` |
 | Linux | bash | `'single'` or `"double"` | `/` |
-| Windows | PowerShell | `` `backtick `` or `"double"` | `\` |
 
 ## Integration Tests (🟡 Important)
 
@@ -355,7 +345,7 @@ When adding/modifying a filter:
 - [ ] Integration tests passed (`cargo test --ignored`)
 - [ ] Performance regression check (hyperfine comparison)
 - [ ] Memory usage verified (<5MB with `time -l`)
-- [ ] Cross-platform CI passed (macOS + Linux + Windows)
+- [ ] Cross-platform CI passed (macOS + Linux)
 
 ## Common Testing Patterns
 

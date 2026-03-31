@@ -24,13 +24,65 @@ Automatically clean all stale worktrees: merged branches and orphaned git refere
 #!/bin/bash
 set -euo pipefail
 
+detect_default_branch() {
+  if remote_head=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null); then
+    printf '%s\n' "${remote_head#origin/}"
+  elif git show-ref --verify --quiet refs/heads/main; then
+    printf 'main\n'
+  elif git show-ref --verify --quiet refs/heads/master; then
+    printf 'master\n'
+  else
+    git branch --show-current
+  fi
+}
+
+resolve_branch_ref() {
+  local branch="$1"
+  if git show-ref --verify --quiet "refs/heads/$branch"; then
+    printf '%s\n' "$branch"
+  elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    printf 'origin/%s\n' "$branch"
+  else
+    printf '%s\n' "$branch"
+  fi
+}
+
+list_branch_worktrees() {
+  git worktree list --porcelain | awk '
+    $1 == "worktree" { path = substr($0, 10) }
+    $1 == "branch" {
+      branch = $2
+      sub(/^refs\/heads\//, "", branch)
+      print branch "\t" path
+    }
+  '
+}
+
+is_protected_branch() {
+  [ "$1" = "$DEFAULT_BRANCH" ] || [ "$1" = "main" ] || [ "$1" = "master" ]
+}
+
+safe_remove_worktree() {
+  local path="$1"
+  if git worktree remove "$path" 2>/dev/null; then
+    return 0
+  fi
+  git worktree remove --force "$path" 2>/dev/null
+}
+
 DRY_RUN=false
 if [[ "${ARGUMENTS:-}" == *"--dry-run"* ]]; then
   DRY_RUN=true
 fi
 
+DEFAULT_BRANCH="$(detect_default_branch)"
+DEFAULT_BRANCH_REF="$(resolve_branch_ref "$DEFAULT_BRANCH")"
+CURRENT_DIR="$(git rev-parse --show-toplevel)"
+
 echo "🧹 Cleaning Worktrees"
 echo "====================="
+echo ""
+echo "Default branch: $DEFAULT_BRANCH"
 echo ""
 
 # Step 1: Prune stale git references
@@ -49,21 +101,17 @@ echo "2️⃣  Finding merged worktrees..."
 MERGED_COUNT=0
 MERGED_BRANCHES=()
 
-while IFS= read -r line; do
-  path=$(echo "$line" | awk '{print $1}')
-  branch=$(echo "$line" | grep -oE '\[.*\]' | tr -d '[]' || true)
-
+while IFS=$'\t' read -r branch path; do
   [ -z "$branch" ] && continue
-  [ "$branch" = "master" ] && continue
-  [ "$branch" = "main" ] && continue
-  [ "$path" = "$(pwd)" ] && continue
+  is_protected_branch "$branch" && continue
+  [ "$path" = "$CURRENT_DIR" ] && continue
 
-  if git branch --merged master | grep -q "^[* ] ${branch}$" 2>/dev/null; then
+  if git merge-base --is-ancestor "$branch" "$DEFAULT_BRANCH_REF" 2>/dev/null; then
     MERGED_COUNT=$((MERGED_COUNT + 1))
     MERGED_BRANCHES+=("$branch|$path")
     echo "  ✓ $branch (merged)"
   fi
-done < <(git worktree list)
+done < <(list_branch_worktrees)
 
 if [ $MERGED_COUNT -eq 0 ]; then
   echo "✅ No merged worktrees found"
@@ -104,13 +152,12 @@ for item in "${MERGED_BRANCHES[@]}"; do
   echo ""
   echo "🗑️  Removing: $branch"
 
-  if git worktree remove "$path" 2>/dev/null; then
+  if safe_remove_worktree "$path"; then
     echo "  ✅ Worktree removed"
   else
-    echo "  ⚠️  Git remove failed, forcing..."
-    rm -rf "$path" 2>/dev/null || true
-    git worktree prune 2>/dev/null || true
-    echo "  ✅ Worktree forcefully removed"
+    echo "  ❌ Safe removal failed"
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    continue
   fi
 
   if git branch -d "$branch" 2>/dev/null; then
@@ -148,14 +195,15 @@ echo "💾 Worktrees disk usage: $WORKTREES_SIZE"
 ## Safety Features
 
 - ✅ **Only merged branches**: Never touches unmerged work
-- ✅ **Protected branches**: Skips `master` and `main`
+- ✅ **Protected branches**: Skips the detected default branch and common aliases
 - ✅ **Main repo**: Never removes current working directory
 - ✅ **Remote branches**: Reports but doesn't auto-delete
 - ✅ **Dry-run mode**: Preview before deletion
+- ✅ **Safe removal only**: Uses `git worktree remove` / `--force`, never `rm -rf`
 
 ## When to Use
 
-- After merging PRs into master
+- After merging PRs into the default branch
 - Weekly maintenance
 - Before creating new worktrees (keep things clean)
 
