@@ -4,7 +4,7 @@
 >
 > - [CONTRIBUTING.md](../CONTRIBUTING.md) — Design philosophy, PR process, branch naming, testing requirements
 > - [ARCHITECTURE.md](../ARCHITECTURE.md) — Deep reference: filtering taxonomy, performance benchmarks, architecture decisions
-> - Each folder has its own `README.md` with implementation details and file descriptions
+> - This document is the primary technical index; inspect source files directly for implementation details
 
 ---
 
@@ -77,7 +77,7 @@ The user runs `rtk init` to set up hooks for their LLM agent. This:
 
 RTK supports 7 agents, each with its own installation mode. The hook scripts are embedded in the binary and written at install time.
 
-> **Details**: [`src/hooks/README.md`](../src/hooks/README.md) covers all installation modes, configuration files, and the uninstall flow.
+> **Implementation**: see `src/hooks/init.rs`, `src/hooks/integrity.rs`, and `src/hooks/hook_cmd.rs`.
 
 ### 3.2 Hook Interception (Command Rewriting)
 
@@ -92,7 +92,7 @@ When an LLM agent runs a command (e.g., `git status`):
 
 All rewrite logic lives in Rust (`src/discover/registry.rs`). Hooks are thin delegates that handle agent-specific JSON formats.
 
-> **Details**: [`hooks/README.md`](../hooks/README.md) covers each agent's JSON format, the rewrite registry, compound command handling, and the `RTK_DISABLED` override.
+> **Implementation**: agent artifacts live under `hooks/`, and rewrite logic lives in `src/discover/registry.rs`.
 
 ### 3.3 CLI Parsing and Routing
 
@@ -121,7 +121,7 @@ Each filter module follows the same pattern:
 5. Track token savings to SQLite
 6. Propagate exit code
 
-> **Details**: [`src/cmds/README.md`](../src/cmds/README.md) covers the common pattern, ecosystem organization, cross-command dependencies, and how to add new filters.
+> **Implementation**: see `src/main.rs` for routing and `src/cmds/` for the concrete filter modules.
 
 ### 3.5 Fallback Path
 
@@ -142,7 +142,7 @@ Command received
                  -> No:  Passthrough (inherit stdio, track 0% savings)
 ```
 
-> **Details**: [`src/core/README.md`](../src/core/README.md) covers the TOML filter engine, filter pipeline stages, and trust-gated project filters.
+> **Implementation**: see `src/core/toml_filter.rs` and `src/hooks/trust.rs`.
 
 ### 3.6 Token Tracking
 
@@ -155,7 +155,7 @@ Every command execution records metrics to SQLite (`~/.local/share/rtk/tracking.
 
 Analytics commands (`rtk gain`, `rtk cc-economics`, `rtk session`) query this database to produce dashboards and ROI reports.
 
-> **Details**: [`src/analytics/README.md`](../src/analytics/README.md) covers the analytics modules, and [`src/core/README.md`](../src/core/README.md) covers the tracking database schema.
+> **Implementation**: analytics queries live in `src/analytics/`, and the storage schema lives in `src/core/tracking.rs`.
 
 ### 3.7 Tee Recovery
 
@@ -167,40 +167,40 @@ On command failure (non-zero exit code):
 
 Tee is configurable (enabled/disabled, min size, max files, max file size) and never affects command output or exit code on failure.
 
-> **Details**: [`src/core/README.md`](../src/core/README.md) covers tee configuration and the rotation strategy.
+> **Implementation**: see `src/core/tee.rs`.
 
 ---
 
 ## 4. Folder Map
 
-Start here, then drill down into each README for file-level details.
+Start here, then drill down into the source directories and files for file-level details.
 
 ### `src/` — Rust source code
 
-| Directory | What it does | What you'll find in its README |
-|-----------|-------------|-------------------------------|
-| `main.rs` | CLI entry point, `Commands` enum, routing match | _(no README — read the file directly)_ |
-| [`core/`](../src/core/README.md) | Shared infrastructure | Tracking DB schema, config system, tee recovery, TOML filter engine, utility functions |
-| [`hooks/`](../src/hooks/README.md) | Hook system | Installation flow (`rtk init`), integrity verification, rewrite command, trust model |
-| [`analytics/`](../src/analytics/README.md) | Token savings analytics | `rtk gain` dashboard, Claude Code economics, ccusage parsing |
-| [`cmds/`](../src/cmds/README.md) | **Command filters (9 ecosystems)** | Common filter pattern, cross-command routing, token savings table, **links to each ecosystem** |
-| [`discover/`](../src/discover/README.md) | History analysis + rewrite registry | Rewrite patterns, session providers, compound command splitting |
-| [`learn/`](../src/learn/README.md) | CLI correction detection | Error classification, correction pair detection, rule generation |
-| [`parser/`](../src/parser/README.md) | Parser infrastructure | Canonical types (TestResult, LintResult, etc.), 3-tier format modes, migration guide |
-| [`filters/`](../src/filters/README.md) | TOML filter configs | TOML DSL syntax, 8-stage pipeline, inline testing, naming conventions |
+| Directory | What it does | Key implementation entry points |
+|-----------|-------------|---------------------------------|
+| `main.rs` | CLI entry point, `Commands` enum, routing match | `src/main.rs` |
+| `core/` | Shared infrastructure | `src/core/tracking.rs`, `src/core/toml_filter.rs`, `src/core/config.rs`, `src/core/tee.rs` |
+| `hooks/` | Hook system | `src/hooks/init.rs`, `src/hooks/integrity.rs`, `src/hooks/hook_cmd.rs`, `src/hooks/permissions.rs` |
+| `analytics/` | Token savings analytics | `src/analytics/gain.rs`, `src/analytics/cc_economics.rs`, `src/analytics/session_cmd.rs` |
+| `cmds/` | **Command filters (9 ecosystems)** | `src/cmds/` subdirectories plus `src/main.rs` routing |
+| `discover/` | History analysis + rewrite registry | `src/discover/registry.rs`, `src/discover/provider.rs` |
+| `learn/` | CLI correction detection | `src/learn/mod.rs` |
+| `parser/` | Parser infrastructure | `src/parser/` |
+| `filters/` | TOML filter configs | `src/filters/*.toml`, `src/core/toml_filter.rs` |
 
 ### `hooks/` — Deployed hook artifacts (root directory)
 
-| Directory | Agent | What you'll find in its README |
-|-----------|-------|-------------------------------|
-| [`hooks/`](../hooks/README.md) | _(parent)_ | **All JSON formats**, rewrite registry overview, exit code contract, override controls |
-| [`claude/`](../hooks/claude/README.md) | Claude Code | Shell hook mechanism, `PreToolUse` JSON, test script |
-| [`copilot/`](../hooks/copilot/README.md) | GitHub Copilot | Rust binary hook, VS Code Chat vs Copilot CLI dual format |
-| [`cursor/`](../hooks/cursor/README.md) | Cursor IDE | Shell hook, empty JSON response requirement |
-| [`cline/`](../hooks/cline/README.md) | Cline / Roo Code | Rules file (prompt-level, no programmatic hook) |
-| [`windsurf/`](../hooks/windsurf/README.md) | Windsurf / Cascade | Rules file (workspace-scoped) |
-| [`codex/`](../hooks/codex/README.md) | OpenAI Codex CLI | Awareness document, AGENTS.md integration |
-| [`opencode/`](../hooks/opencode/README.md) | OpenCode | TypeScript plugin, zx library, in-place mutation |
+| Directory | Agent | What it contains |
+|-----------|-------|------------------|
+| `hooks/` | _(parent)_ | Deployed hook artifacts and awareness files emitted by `rtk init` |
+| `hooks/claude/` | Claude Code | Shell hook and awareness snippets |
+| `hooks/copilot/` | GitHub Copilot | Copilot hook assets |
+| `hooks/cursor/` | Cursor IDE | Cursor hook assets |
+| `hooks/cline/` | Cline / Roo Code | Prompt-level rules |
+| `hooks/windsurf/` | Windsurf / Cascade | Workspace-scoped rules |
+| `hooks/codex/` | OpenAI Codex CLI | Awareness document and AGENTS integration assets |
+| `hooks/opencode/` | OpenCode | Plugin sources and assets |
 
 ---
 
@@ -220,7 +220,7 @@ RTK supports the following LLM agents through hook integrations:
 | Codex CLI | Awareness doc | AGENTS.md integration | N/A (prompt) |
 | OpenCode | TS plugin | `tool.execute.before` event | Yes (in-place mutation) |
 
-> **Details**: [`hooks/README.md`](../hooks/README.md) has the full JSON schemas for each agent. [`src/hooks/README.md`](../src/hooks/README.md) covers installation, integrity verification, and the rewrite command.
+> **Implementation**: see `hooks/` for deployed artifacts and `src/hooks/` for install/runtime logic.
 
 ---
 
@@ -230,13 +230,13 @@ RTK supports the following LLM agents through hook integrations:
 
 Compiled filter modules for complex transformations with 60-95% token savings.
 
-> **Details**: [`src/cmds/README.md`](../src/cmds/README.md) and each ecosystem subdirectory README.
+> **Implementation**: see `src/cmds/` and the corresponding ecosystem subdirectories.
 
 ### TOML DSL Filters (src/filters/*.toml)
 
-Declarative filters with an 8-stage pipeline: strip ANSI, regex replace, match output, strip/keep lines, truncate lines, head/tail, max lines, on-empty message. Loaded from three tiers: built-in (compiled), global (`~/.config/rtk/filters/`), project-local (`.rtk/filters/`, trust-gated).
+Declarative filters with an 8-stage pipeline: strip ANSI, regex replace, match output, strip/keep lines, truncate lines, head/tail, max lines, on-empty message. Loaded from three tiers: built-in (compiled), global (`~/.config/rtk/filters.toml`), project-local (`.rtk/filters.toml`, trust-gated).
 
-> **Details**: [`src/core/README.md`](../src/core/README.md) covers the TOML filter engine.
+> **Implementation**: see `src/core/toml_filter.rs`.
 
 ---
 
