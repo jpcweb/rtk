@@ -97,7 +97,7 @@ All proxy commands appear in `rtk gain --history` with 0% savings (input = outpu
 
 ## Coding Rules
 
-Rust patterns, error handling, and anti-patterns are defined in `.claude/rules/rust-patterns.md` (auto-loaded into context). Key points:
+Rust patterns, error handling, and anti-patterns for this repository are summarized here and in [CONTRIBUTING.md](CONTRIBUTING.md). Key points:
 
 - **anyhow::Result** everywhere, always `.context("description")?`
 - **No unwrap()** in production code
@@ -106,7 +106,7 @@ Rust patterns, error handling, and anti-patterns are defined in `.claude/rules/r
 - **No async**: single-threaded by design (startup <10ms)
 - **Exit code propagation**: `std::process::exit(code)` on child failure
 
-Testing strategy and performance targets are defined in `.claude/rules/cli-testing.md` (auto-loaded). Key targets: <10ms startup, <5MB memory, 60-90% token savings.
+Testing strategy and performance targets are documented in [CONTRIBUTING.md](CONTRIBUTING.md) and the module READMEs. Key targets: <10ms startup, <5MB memory, 60-90% token savings.
 
 For contribution workflow and design philosophy, see [CONTRIBUTING.md](CONTRIBUTING.md). For the step-by-step filter implementation checklist, see [src/cmds/README.md](src/cmds/README.md#adding-a-new-command-filter).
 

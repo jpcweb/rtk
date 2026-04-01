@@ -148,7 +148,7 @@ Adding a new filter or command requires changes in multiple places:
    - Add `pub mod mymod;` to the ecosystem's `mod.rs` (e.g., `src/cmds/system/mod.rs`)
    - Add variant to `Commands` enum in `main.rs` with `#[arg(trailing_var_arg = true, allow_hyphen_values = true)]`
    - Add routing match arm in `main.rs` to call `mymod::run()`
-4. **Write tests** — Real fixture, snapshot test, token savings >= 60% (see [testing rules](../../.claude/rules/cli-testing.md))
+4. **Write tests** — Real fixture, snapshot test, token savings >= 60% (see [CONTRIBUTING.md](../../CONTRIBUTING.md) and the existing command module tests)
 5. **Update docs** — README.md command list, CHANGELOG.md
 
 Follow the [Common Pattern](#common-pattern) above for the module template (timer, fallback, tee, tracking, exit code). For TOML-vs-Rust decision criteria, see [CONTRIBUTING.md](../../CONTRIBUTING.md#toml-vs-rust-which-one).

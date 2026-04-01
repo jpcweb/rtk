@@ -136,15 +136,9 @@ rtk init -g
 rtk init --show  # Should show "✅ Hook: executable, with guards"
 ```
 
-**Option B: Manual (fallback)**
-```bash
-# Copy hook to Claude Code hooks directory
-mkdir -p ~/.claude/hooks
-cp .claude/hooks/rtk-rewrite.sh ~/.claude/hooks/
-chmod +x ~/.claude/hooks/rtk-rewrite.sh
-```
+If automatic installation fails, rerun `rtk init -g --show` to inspect the generated hook path and installation status, then add that path to `~/.claude/settings.json` if Claude Code still needs a manual entry.
 
-Then add to `~/.claude/settings.json` (replace `~` with full path):
+Example `~/.claude/settings.json` entry (replace with the actual hook path reported by `rtk init -g --show`):
 ```json
 {
   "hooks": {
