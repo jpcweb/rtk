@@ -1,12 +1,13 @@
 #!/usr/bin/env sh
-# rtk installer - https://github.com/rtk-ai/rtk
-# Usage: curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+# Build and install RTK from the current repository checkout.
+# Usage: ./install.sh [install-dir]
 
-set -e
+set -eu
 
-REPO="rtk-ai/rtk"
 BINARY_NAME="rtk"
-INSTALL_DIR="${RTK_INSTALL_DIR:-$HOME/.local/bin}"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+INSTALL_DIR="${RTK_INSTALL_DIR:-${1:-$HOME/.local/bin}}"
+BINARY_PATH="${SCRIPT_DIR}/target/release/${BINARY_NAME}"
 
 # Colors
 RED='\033[0;31m'
@@ -27,94 +28,55 @@ error() {
     exit 1
 }
 
-# Detect OS
-detect_os() {
-    case "$(uname -s)" in
-        Linux*)  OS="linux";;
-        Darwin*) OS="darwin";;
-        *)       error "Unsupported operating system: $(uname -s)";;
-    esac
-}
-
-# Detect architecture
-detect_arch() {
-    case "$(uname -m)" in
-        x86_64|amd64)  ARCH="x86_64";;
-        arm64|aarch64) ARCH="aarch64";;
-        *)             error "Unsupported architecture: $(uname -m)";;
-    esac
-}
-
-# Get latest release version
-get_latest_version() {
-    VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-    if [ -z "$VERSION" ]; then
-        error "Failed to get latest version"
+require_cmd() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        error "Missing required command: $1"
     fi
 }
 
-# Build target triple
-get_target() {
-    case "$OS" in
-        linux)
-            case "$ARCH" in
-                x86_64)  TARGET="x86_64-unknown-linux-musl";;
-                aarch64) TARGET="aarch64-unknown-linux-gnu";;
-            esac
-            ;;
-        darwin)
-            TARGET="${ARCH}-apple-darwin"
-            ;;
-    esac
+verify_checkout() {
+    if [ ! -f "${SCRIPT_DIR}/Cargo.toml" ] || [ ! -d "${SCRIPT_DIR}/src" ]; then
+        error "Run this script from the RTK repository checkout."
+    fi
 }
 
-# Download and install
-install() {
-    info "Detected: $OS $ARCH"
-    info "Target: $TARGET"
-    info "Version: $VERSION"
-
-    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${BINARY_NAME}-${TARGET}.tar.gz"
-    TEMP_DIR=$(mktemp -d)
-    ARCHIVE="${TEMP_DIR}/${BINARY_NAME}.tar.gz"
-
-    info "Downloading from: $DOWNLOAD_URL"
-    if ! curl -fsSL "$DOWNLOAD_URL" -o "$ARCHIVE"; then
-        error "Failed to download binary"
+build() {
+    require_cmd cargo
+    info "Building ${BINARY_NAME} from local source with cargo..."
+    (
+        cd "$SCRIPT_DIR"
+        cargo build --release
+    )
+    if [ ! -x "$BINARY_PATH" ]; then
+        error "Build finished but ${BINARY_PATH} was not created"
     fi
+}
 
-    info "Extracting..."
-    tar -xzf "$ARCHIVE" -C "$TEMP_DIR"
-
+install_binary() {
     mkdir -p "$INSTALL_DIR"
-    mv "${TEMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/"
-
-    chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-
-    # Cleanup
-    rm -rf "$TEMP_DIR"
-
-    info "Successfully installed ${BINARY_NAME} to ${INSTALL_DIR}/${BINARY_NAME}"
+    install -m 755 "$BINARY_PATH" "${INSTALL_DIR}/${BINARY_NAME}"
+    info "Installed ${BINARY_NAME} to ${INSTALL_DIR}/${BINARY_NAME}"
 }
 
 # Verify installation
 verify() {
-    if command -v "$BINARY_NAME" >/dev/null 2>&1; then
-        info "Verification: $($BINARY_NAME --version)"
-    else
-        warn "Binary installed but not in PATH. Add to your shell profile:"
-        warn "  export PATH=\"\$HOME/.local/bin:\$PATH\""
-    fi
+    info "Verification: $("${INSTALL_DIR}/${BINARY_NAME}" --version)"
+    case ":$PATH:" in
+        *":$INSTALL_DIR:"*) ;;
+        *)
+            warn "Binary installed but ${INSTALL_DIR} is not in PATH. Add to your shell profile:"
+            warn "  export PATH=\"${INSTALL_DIR}:\$PATH\""
+            ;;
+    esac
 }
 
 main() {
-    info "Installing $BINARY_NAME..."
+    info "Installing ${BINARY_NAME} from the current RTK source checkout..."
+    info "No prebuilt binaries are downloaded by this installer."
 
-    detect_os
-    detect_arch
-    get_target
-    get_latest_version
-    install
+    verify_checkout
+    build
+    install_binary
     verify
 
     echo ""

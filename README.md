@@ -10,7 +10,6 @@
   <a href="https://github.com/rtk-ai/rtk/releases"><img src="https://img.shields.io/github/v/release/rtk-ai/rtk" alt="Release"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1470188214710046894?label=Discord&logo=discord" alt="Discord"></a>
-  <a href="https://formulae.brew.sh/formula/rtk"><img src="https://img.shields.io/homebrew/v/rtk" alt="Homebrew"></a>
 </p>
 
 <p align="center">
@@ -52,36 +51,27 @@ rtk filters and compresses command outputs before they reach your LLM context. S
 
 ## Installation
 
-### Homebrew (recommended)
+### Local Source Build (recommended)
 
 ```bash
-brew install rtk
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+./install.sh
 ```
 
-### Quick Install (Linux/macOS)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
-```
-
-> Installs to `~/.local/bin`. Add to PATH if needed:
+> Builds `target/release/rtk` locally with Cargo and installs it to `~/.local/bin` by default.
+> Add it to PATH if needed:
 > ```bash
 > echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc  # or ~/.zshrc
 > ```
 
-### Cargo
+### Cargo From Local Checkout
 
 ```bash
-cargo install --git https://github.com/rtk-ai/rtk
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+cargo install --path . --force
 ```
-
-### Pre-built Binaries
-
-Download from [releases](https://github.com/rtk-ai/rtk/releases):
-- macOS: `rtk-x86_64-apple-darwin.tar.gz` / `rtk-aarch64-apple-darwin.tar.gz`
-- Linux: `rtk-x86_64-unknown-linux-musl.tar.gz` / `rtk-aarch64-unknown-linux-gnu.tar.gz`
-
-Windows is no longer supported or distributed.
 
 ### Verify Installation
 
@@ -90,7 +80,7 @@ rtk --version   # Should show "rtk 0.28.2"
 rtk gain        # Should show token savings stats
 ```
 
-> **Name collision warning**: Another project named "rtk" (Rust Type Kit) exists on crates.io. If `rtk gain` fails, you have the wrong package. Use `cargo install --git` above instead.
+> **Name collision warning**: Another project named "rtk" (Rust Type Kit) exists on crates.io. If `rtk gain` fails, you have the wrong package. Rebuild from this checkout with `./install.sh` or `cargo install --path . --force`.
 
 ## Quick Start
 
@@ -446,7 +436,7 @@ FAILED: 2/15 tests
 ```bash
 rtk init -g --uninstall     # Remove hook, RTK.md, settings.json entry
 cargo uninstall rtk          # Remove binary
-brew uninstall rtk           # If installed via Homebrew
+rm -f ~/.local/bin/rtk       # If installed via ./install.sh default path
 ```
 
 ## Documentation

@@ -11,7 +11,6 @@
   <a href="https://github.com/rtk-ai/rtk/releases"><img src="https://img.shields.io/github/v/release/rtk-ai/rtk" alt="Release"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://discord.gg/RySmvNF5kF"><img src="https://img.shields.io/discord/1478373640461488159?label=Discord&logo=discord" alt="Discord"></a>
-  <a href="https://formulae.brew.sh/formula/rtk"><img src="https://img.shields.io/homebrew/v/rtk" alt="Homebrew"></a>
 </p>
 
 <p align="center">
@@ -49,22 +48,22 @@ rtk filtre et compresse les sorties de commandes avant qu'elles n'atteignent le 
 
 ## Installation
 
-### Homebrew (recommande)
+### Build local depuis le code source (recommande)
 
 ```bash
-brew install rtk
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+./install.sh
 ```
 
-### Installation rapide (Linux/macOS)
+> Construit `target/release/rtk` localement avec Cargo et l'installe dans `~/.local/bin` par defaut.
+
+### Cargo depuis le checkout local
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
-```
-
-### Cargo
-
-```bash
-cargo install --git https://github.com/rtk-ai/rtk
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+cargo install --path . --force
 ```
 
 ### Verification
@@ -74,7 +73,7 @@ rtk --version   # Doit afficher "rtk 0.27.x"
 rtk gain        # Doit afficher les statistiques d'economies
 ```
 
-> **Attention** : Un autre projet "rtk" (Rust Type Kit) existe sur crates.io. Si `rtk gain` echoue, vous avez le mauvais package.
+> **Attention** : Un autre projet "rtk" (Rust Type Kit) existe sur crates.io. Si `rtk gain` echoue, vous avez le mauvais package. Recompilez depuis ce checkout avec `./install.sh` ou `cargo install --path . --force`.
 
 ## Demarrage rapide
 

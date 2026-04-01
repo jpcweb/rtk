@@ -367,12 +367,14 @@ jobs:
   track-savings:
     runs-on: ubuntu-latest
     steps:
-      - name: Install RTK
-        run: cargo install --git https://github.com/rtk-ai/rtk
+      - uses: actions/checkout@v4
+
+      - name: Build RTK
+        run: cargo build --release
 
       - name: Export weekly stats
         run: |
-          rtk gain --weekly --format json > rtk-weekly.json
+          ./target/release/rtk gain --weekly --format json > rtk-weekly.json
           cat rtk-weekly.json
 
       - name: Upload artifact

@@ -43,10 +43,12 @@ If you accidentally installed Rust Type Kit:
 cargo uninstall rtk
 ```
 
-### Quick Install (Linux/macOS)
+### Local Source Install (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+./install.sh
 ```
 
 After installation, **verify you have the correct rtk**:
@@ -57,17 +59,16 @@ rtk gain  # Must show token savings stats (not "command not found")
 ### Alternative: Manual Installation
 
 ```bash
-# From rtk-ai repository (NOT reachingforthejack!)
-cargo install --git https://github.com/rtk-ai/rtk
-
-# OR (if published and correct on crates.io)
-cargo install rtk
+# From a local rtk-ai repository checkout (NOT reachingforthejack!)
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+cargo install --path . --force
 
 # ALWAYS VERIFY after installation
 rtk gain  # MUST show token savings, not "command not found"
 ```
 
-⚠️ **WARNING**: `cargo install rtk` from crates.io might install the wrong package. Always verify with `rtk gain`.
+⚠️ **WARNING**: `cargo install rtk` from crates.io might install the wrong package. Use a local checkout plus `cargo install --path . --force`.
 
 ## Project Initialization
 
@@ -181,7 +182,9 @@ rtk init --show
 ### First-Time User (Recommended)
 ```bash
 # 1. Install RTK
-cargo install --git https://github.com/rtk-ai/rtk
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+./install.sh
 rtk gain  # Verify (must show token stats)
 
 # 2. Setup with prompts
@@ -262,13 +265,11 @@ rtk init -g --uninstall
 ### Binary Removal
 
 ```bash
-# If installed via cargo
+# If installed via cargo install --path .
 cargo uninstall rtk
 
-# If installed via package manager
-brew uninstall rtk          # macOS Homebrew
-sudo apt remove rtk         # Debian/Ubuntu
-sudo dnf remove rtk         # Fedora/RHEL
+# If installed via ./install.sh default path
+rm -f ~/.local/bin/rtk
 ```
 
 ### Restore from Backup (if needed)

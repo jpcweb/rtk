@@ -20,13 +20,14 @@ if command -v rtk &> /dev/null; then
     echo -e "   ${GREEN}✅ RTK is installed${NC}"
     RTK_PATH=$(which rtk)
     echo "   Location: $RTK_PATH"
-else
-    echo -e "   ${RED}❌ RTK is NOT installed${NC}"
-    echo ""
-    echo "   Install with:"
-    echo "   curl -fsSL https://github.com/rtk-ai/rtk/blob/master/install.sh| sh"
-    exit 1
-fi
+    else
+        echo -e "   ${RED}❌ RTK is NOT installed${NC}"
+        echo ""
+        echo "   Install from a local checkout:"
+        echo "   git clone https://github.com/rtk-ai/rtk.git"
+        echo "   cd rtk && ./install.sh"
+        exit 1
+    fi
 echo ""
 
 # Check 2: RTK version
@@ -40,14 +41,15 @@ echo "3. Verifying this is Token Killer (not Type Kit)..."
 if rtk gain &>/dev/null || rtk gain --help &>/dev/null; then
     echo -e "   ${GREEN}✅ CORRECT - You have Rust Token Killer${NC}"
     CORRECT_RTK=true
-else
-    echo -e "   ${RED}❌ WRONG - You have Rust Type Kit (different project!)${NC}"
-    echo ""
-    echo "   You installed the wrong package. Fix it with:"
-    echo "   cargo uninstall rtk"
-    echo "   curl -fsSL https://github.com/rtk-ai/rtk/blob/master/install.sh | sh"
-    CORRECT_RTK=false
-fi
+    else
+        echo -e "   ${RED}❌ WRONG - You have Rust Type Kit (different project!)${NC}"
+        echo ""
+        echo "   You installed the wrong package. Fix it with:"
+        echo "   cargo uninstall rtk"
+        echo "   git clone https://github.com/rtk-ai/rtk.git"
+        echo "   cd rtk && ./install.sh"
+        CORRECT_RTK=false
+    fi
 echo ""
 
 if [ "$CORRECT_RTK" = false ]; then
@@ -123,7 +125,7 @@ if [ -f "$HOME/.claude/hooks/rtk-rewrite.sh" ]; then
     fi
 else
     echo -e "   ${YELLOW}⚠️${NC}  Auto-rewrite hook not installed (optional)"
-    echo "      Install: cp .claude/hooks/rtk-rewrite.sh ~/.claude/hooks/"
+    echo "      Install: rtk init -g"
 fi
 echo ""
 
@@ -140,11 +142,10 @@ if [ ${#MISSING_FEATURES[@]} -gt 0 ]; then
         echo "  - $feature"
     done
     echo ""
-    echo "To get all features, install the fork:"
+    echo "To rebuild from the local project checkout:"
     echo "  cargo uninstall rtk"
-    echo "  curl -fsSL https://github.com/rtk-ai/rtk/blob/master/install.sh | sh"
-    echo "  cd rtk && git checkout feat/all-features"
-    echo "  cargo install --path . --force"
+    echo "  git clone https://github.com/rtk-ai/rtk.git"
+    echo "  cd rtk && ./install.sh"
 else
     echo -e "${GREEN}✅ Full-featured RTK installation detected${NC}"
 fi

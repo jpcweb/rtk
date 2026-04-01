@@ -25,12 +25,16 @@ cargo uninstall rtk
 
 #### Quick Install (Linux/macOS)
 ```bash
-curl -fsSL https://github.com/rtk-ai/rtk/blob/master/install.sh | sh
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+./install.sh
 ```
 
 #### Alternative: Manual Installation
 ```bash
-cargo install --git https://github.com/rtk-ai/rtk
+git clone https://github.com/rtk-ai/rtk.git
+cd rtk
+cargo install --path . --force
 ```
 
 **3. Verify installation:**
@@ -72,15 +76,12 @@ If **Rust Type Kit** is published to crates.io under the name `rtk`, running `ca
 ### Solution
 **NEVER use** `cargo install rtk` without verifying.
 
-**Always use explicit repository URLs:**
+**Always install from an explicit local checkout:**
 
 ```bash
 # CORRECT - Token Killer
-cargo install --git https://github.com/rtk-ai/rtk
-
-# OR install from fork
 git clone https://github.com/rtk-ai/rtk.git
-cd rtk && git checkout feat/all-features
+cd rtk
 cargo install --path . --force
 ```
 

@@ -8,7 +8,7 @@ Stability & Reliability
 
     Pro Tooling: Add a configuration file (TOML) and structured logging.
 
-    Easy Install: Launch a Homebrew formula and pre-compiled binaries for one-click setup.
+    Easy Install: Keep the source-based Cargo install flow simple and reliable.
 
     Early Adoption: Prove token savings on real projects to onboard the first 5 teams.
 
