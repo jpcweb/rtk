@@ -37,10 +37,6 @@ use std::path::{Path, PathBuf};
 pub enum AgentTarget {
     /// Claude Code (default)
     Claude,
-    /// Cursor Agent (editor and CLI)
-    Cursor,
-    /// Windsurf IDE (Cascade)
-    Windsurf,
     /// Cline / Roo Code (VS Code)
     Cline,
 }
@@ -346,10 +342,6 @@ enum Commands {
         /// Target Codex CLI (uses AGENTS.md + RTK.md, no Claude hook patching)
         #[arg(long)]
         codex: bool,
-
-        /// Install GitHub Copilot integration (VS Code + CLI)
-        #[arg(long)]
-        copilot: bool,
     },
 
     /// Download with compact output (strips progress bars)
@@ -680,7 +672,7 @@ enum Commands {
         args: Vec<String>,
     },
 
-    /// Hook processors for LLM CLI tools (Gemini CLI, Copilot, etc.)
+    /// Hook processors for LLM CLI tools
     Hook {
         #[command(subcommand)]
         command: HookCommands,
@@ -691,8 +683,6 @@ enum Commands {
 enum HookCommands {
     /// Process Gemini CLI BeforeTool hook (reads JSON from stdin)
     Gemini,
-    /// Process Copilot preToolUse hook (VS Code + Copilot CLI, reads JSON from stdin)
-    Copilot,
 }
 
 #[derive(Subcommand)]
@@ -1652,13 +1642,11 @@ fn main() -> Result<()> {
             no_patch,
             uninstall,
             codex,
-            copilot,
         } => {
             if show {
                 hooks::init::show_config(codex)?;
             } else if uninstall {
-                let cursor = agent == Some(AgentTarget::Cursor);
-                hooks::init::uninstall(global, gemini, codex, cursor, cli.verbose)?;
+                hooks::init::uninstall(global, gemini, codex, cli.verbose)?;
             } else if gemini {
                 let patch_mode = if auto_patch {
                     hooks::init::PatchMode::Auto
@@ -1668,13 +1656,9 @@ fn main() -> Result<()> {
                     hooks::init::PatchMode::Ask
                 };
                 hooks::init::run_gemini(global, hook_only, patch_mode, cli.verbose)?;
-            } else if copilot {
-                hooks::init::run_copilot(cli.verbose)?;
             } else {
                 let install_opencode = opencode;
                 let install_claude = !opencode;
-                let install_cursor = agent == Some(AgentTarget::Cursor);
-                let install_windsurf = agent == Some(AgentTarget::Windsurf);
                 let install_cline = agent == Some(AgentTarget::Cline);
 
                 let patch_mode = if auto_patch {
@@ -1688,8 +1672,6 @@ fn main() -> Result<()> {
                     global,
                     install_claude,
                     install_opencode,
-                    install_cursor,
-                    install_windsurf,
                     install_cline,
                     claude_md,
                     hook_only,
@@ -2057,9 +2039,6 @@ fn main() -> Result<()> {
         Commands::Hook { command } => match command {
             HookCommands::Gemini => {
                 hooks::hook_cmd::run_gemini()?;
-            }
-            HookCommands::Copilot => {
-                hooks::hook_cmd::run_copilot()?;
             }
         },
 

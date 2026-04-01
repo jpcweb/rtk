@@ -31,7 +31,7 @@ if [ -n "$RTK_VERSION" ]; then
   MINOR=$(echo "$RTK_VERSION" | cut -d. -f2)
   # Require >= 0.23.0
   if [ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 23 ]; then
-    echo "[rtk] WARNING: rtk $RTK_VERSION is too old (need >= 0.23.0). Upgrade: cargo install rtk" >&2
+    echo "[rtk] WARNING: rtk $RTK_VERSION is too old (need >= 0.23.0). Upgrade: rebuild RTK from your local source checkout" >&2
     exit 0
   fi
 fi

@@ -86,12 +86,11 @@ rtk gain        # Should show token savings stats
 
 ```bash
 # 1. Install for your AI tool
-rtk init -g                     # Claude Code / Copilot (default)
+rtk init -g                     # Claude Code (default)
 rtk init -g --gemini            # Gemini CLI
 rtk init -g --codex             # Codex (OpenAI)
-rtk init -g --agent cursor      # Cursor
-rtk init --agent windsurf       # Windsurf
 rtk init --agent cline          # Cline / Roo Code
+rtk init -g --opencode          # OpenCode
 
 # 2. Restart your AI tool, then test
 git status  # Automatically rewritten to rtk git status
@@ -278,21 +277,17 @@ rtk init -g --hook-only     # Hook only, no RTK.md
 rtk init --show             # Verify installation
 ```
 
-After install, **restart Claude Code**.
+After install, **restart your assistant**.
 
 ## Supported AI Tools
 
-RTK supports 9 AI coding tools. Each integration transparently rewrites shell commands to `rtk` equivalents for 60-90% token savings.
+RTK supports 5 AI coding tools. Each integration routes shell commands through `rtk` for 60-90% token savings.
 
 | Tool | Install | Method |
 |------|---------|--------|
 | **Claude Code** | `rtk init -g` | PreToolUse hook (bash) |
-| **GitHub Copilot (VS Code)** | `rtk init -g --copilot` | PreToolUse hook (`rtk hook copilot`) — transparent rewrite |
-| **GitHub Copilot CLI** | `rtk init -g --copilot` | PreToolUse deny-with-suggestion (CLI limitation) |
-| **Cursor** | `rtk init -g --agent cursor` | preToolUse hook (hooks.json) |
 | **Gemini CLI** | `rtk init -g --gemini` | BeforeTool hook (`rtk hook gemini`) |
 | **Codex** | `rtk init -g --codex` | AGENTS.md + RTK.md instructions |
-| **Windsurf** | `rtk init --agent windsurf` | .windsurfrules (project-scoped) |
 | **Cline / Roo Code** | `rtk init --agent cline` | .clinerules (project-scoped) |
 | **OpenCode** | `rtk init -g --opencode` | Plugin TS (tool.execute.before) |
 | **Mistral Vibe** | Planned (#800) | Blocked on upstream BeforeToolCallback |
@@ -305,26 +300,6 @@ rtk init -g --auto-patch    # Non-interactive (CI/CD)
 rtk init --show             # Verify installation
 rtk init -g --uninstall     # Remove
 ```
-
-### GitHub Copilot (VS Code + CLI)
-
-```bash
-rtk init -g --copilot         # Install hook + instructions
-```
-
-Creates `.github/hooks/rtk-rewrite.json` (PreToolUse hook) and `.github/copilot-instructions.md` (prompt-level awareness).
-
-The hook (`rtk hook copilot`) auto-detects the format:
-- **VS Code Copilot Chat**: transparent rewrite via `updatedInput` (same as Claude Code)
-- **Copilot CLI**: deny-with-suggestion (CLI does not support `updatedInput` yet — see [copilot-cli#2013](https://github.com/github/copilot-cli/issues/2013))
-
-### Cursor
-
-```bash
-rtk init -g --agent cursor
-```
-
-Creates `~/.cursor/hooks/rtk-rewrite.sh` + patches `~/.cursor/hooks.json` with preToolUse matcher. Works with both Cursor editor and `cursor-agent` CLI.
 
 ### Gemini CLI
 
@@ -342,14 +317,6 @@ rtk init -g --codex
 ```
 
 Creates `~/.codex/RTK.md` + `~/.codex/AGENTS.md` with `@RTK.md` reference. Codex reads these as global instructions.
-
-### Windsurf
-
-```bash
-rtk init --agent windsurf
-```
-
-Creates `.windsurfrules` in the current project. Cascade reads rules and prefixes commands with `rtk`.
 
 ### Cline / Roo Code
 

@@ -10,7 +10,7 @@
 
 ## 1. Project Vision
 
-LLM-powered coding agents (Claude Code, Copilot, Cursor, etc.) consume tokens for every CLI command output they process. Most command outputs contain boilerplate, progress bars, ANSI escape codes, and verbose formatting that wastes tokens without providing actionable information.
+LLM-powered coding agents (Claude Code, Gemini CLI, Codex, etc.) consume tokens for every CLI command output they process. Most command outputs contain boilerplate, progress bars, ANSI escape codes, and verbose formatting that wastes tokens without providing actionable information.
 
 RTK sits between the agent and the CLI, filtering outputs to keep only what matters. This achieves 60-90% token savings per command, reducing costs and increasing effective context window utilization. RTK is a single Rust binary with no runtime dependencies beyond the compiled binary itself, adding less than 10ms overhead per command.
 
@@ -24,7 +24,7 @@ User / LLM Agent
        v
 +--------------------------------------------------+
 |  LLM Agent Hook                                  |
-|  hooks/{claude,copilot,cursor,...}/               |
+|  hooks/{claude,codex,cline,...}/                 |
 |  Intercepts: "git status" -> "rtk git status"    |
 +-------------------------+------------------------+
                           |
@@ -75,7 +75,7 @@ The user runs `rtk init` to set up hooks for their LLM agent. This:
 3. Patches the agent's settings file (e.g., `settings.json`) to register the hook
 4. Writes RTK awareness instructions (e.g., `RTK.md`) for prompt-level guidance
 
-RTK supports 7 agents, each with its own installation mode. The hook scripts are embedded in the binary and written at install time.
+RTK supports 5 agents, each with its own installation mode. The hook assets are embedded in the binary and written at install time.
 
 > **Implementation**: see `src/hooks/init.rs`, `src/hooks/integrity.rs`, and `src/hooks/hook_cmd.rs`.
 
@@ -195,10 +195,7 @@ Start here, then drill down into the source directories and files for file-level
 |-----------|-------|------------------|
 | `hooks/` | _(parent)_ | Deployed hook artifacts and awareness files emitted by `rtk init` |
 | `hooks/claude/` | Claude Code | Shell hook and awareness snippets |
-| `hooks/copilot/` | GitHub Copilot | Copilot hook assets |
-| `hooks/cursor/` | Cursor IDE | Cursor hook assets |
 | `hooks/cline/` | Cline / Roo Code | Prompt-level rules |
-| `hooks/windsurf/` | Windsurf / Cascade | Workspace-scoped rules |
 | `hooks/codex/` | OpenAI Codex CLI | Awareness document and AGENTS integration assets |
 | `hooks/opencode/` | OpenCode | Plugin sources and assets |
 
@@ -211,12 +208,8 @@ RTK supports the following LLM agents through hook integrations:
 | Agent | Hook Type | Mechanism | Can Modify Command? |
 |-------|-----------|-----------|---------------------|
 | Claude Code | Shell hook | `PreToolUse` in `settings.json` | Yes (`updatedInput`) |
-| GitHub Copilot (VS Code) | Rust binary | `rtk hook copilot` reads JSON | Yes (`updatedInput`) |
-| GitHub Copilot CLI | Rust binary | `rtk hook copilot` reads JSON | No (deny + suggestion) |
-| Cursor | Shell hook | `preToolUse` hook | Yes (`updated_input`) |
 | Gemini CLI | Rust binary | `rtk hook gemini` reads JSON | Yes (`hookSpecificOutput`) |
 | Cline/Roo Code | Rules file | Prompt-level guidance | N/A (prompt) |
-| Windsurf | Rules file | Prompt-level guidance | N/A (prompt) |
 | Codex CLI | Awareness doc | AGENTS.md integration | N/A (prompt) |
 | OpenCode | TS plugin | `tool.execute.before` event | Yes (in-place mutation) |
 
