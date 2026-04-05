@@ -6,7 +6,7 @@
 //!
 //! # Architecture
 //!
-//! - Storage: SQLite database (~/.local/share/rtk/tracking.db)
+//! - Storage: SQLite database (~/.local/share/rtk/history.db)
 //! - Retention: 10-day automatic cleanup
 //! - Metrics: Input/output tokens, savings %, execution time
 //!
@@ -61,18 +61,17 @@ fn project_filter_params(project_path: Option<&str>) -> (Option<String>, Option<
     }
 }
 
-/// Hard upper bound for tracking history retention and analytics queries.
-const MAX_HISTORY_DAYS: i64 = 10;
+use super::constants::{DEFAULT_HISTORY_DAYS, HISTORY_DB, RTK_DATA_DIR};
 
 fn effective_history_days(requested_days: u32) -> i64 {
-    requested_days.clamp(1, MAX_HISTORY_DAYS as u32) as i64
+    requested_days.clamp(1, DEFAULT_HISTORY_DAYS as u32) as i64
 }
 
 fn configured_history_days() -> i64 {
     let requested_days = crate::core::config::Config::load()
         .ok()
         .map(|config| config.tracking.history_days)
-        .unwrap_or(MAX_HISTORY_DAYS as u32);
+        .unwrap_or(DEFAULT_HISTORY_DAYS as u32);
     effective_history_days(requested_days)
 }
 
@@ -89,8 +88,8 @@ fn history_cutoff_rfc3339() -> String {
 ///
 /// # Database Location
 ///
-/// - Linux: `~/.local/share/rtk/tracking.db`
-/// - macOS: `~/Library/Application Support/rtk/tracking.db`
+/// - Linux: `~/.local/share/rtk/history.db`
+/// - macOS: `~/Library/Application Support/rtk/history.db`
 ///
 /// # Examples
 ///
@@ -951,7 +950,7 @@ fn get_db_path() -> Result<PathBuf> {
 
     // Priority 3: Default platform-specific location
     let data_dir = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."));
-    Ok(data_dir.join("rtk").join("history.db"))
+    Ok(data_dir.join(RTK_DATA_DIR).join(HISTORY_DB))
 }
 
 /// Individual parse failure record.
@@ -1136,42 +1135,6 @@ pub fn args_display(args: &[OsString]) -> String {
         .map(|a| a.to_string_lossy())
         .collect::<Vec<_>>()
         .join(" ")
-}
-
-/// Track a command execution (legacy function, use [`TimedExecution`] for new code).
-///
-/// # Deprecation Notice
-///
-/// This function is deprecated. Use [`TimedExecution`] instead for automatic
-/// timing and cleaner API.
-///
-/// # Arguments
-///
-/// - `original_cmd`: Standard command (e.g., "ls -la")
-/// - `rtk_cmd`: RTK command used (e.g., "rtk ls")
-/// - `input`: Standard command output (for token estimation)
-/// - `output`: RTK command output (for token estimation)
-///
-/// # Migration
-///
-/// ```no_run
-/// # use rtk::tracking::{track, TimedExecution};
-/// // Old (deprecated)
-/// track("ls -la", "rtk ls", "input", "output");
-///
-/// // New (preferred)
-/// let timer = TimedExecution::start();
-/// timer.track("ls -la", "rtk ls", "input", "output");
-/// ```
-#[deprecated(note = "Use TimedExecution instead")]
-#[allow(dead_code)]
-pub fn track(original_cmd: &str, rtk_cmd: &str, input: &str, output: &str) {
-    let input_tokens = estimate_tokens(input);
-    let output_tokens = estimate_tokens(output);
-
-    if let Ok(tracker) = Tracker::new() {
-        let _ = tracker.record(original_cmd, rtk_cmd, input_tokens, output_tokens, 0);
-    }
 }
 
 #[cfg(test)]

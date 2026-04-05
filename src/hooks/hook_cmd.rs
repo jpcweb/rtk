@@ -5,7 +5,6 @@ use serde_json::Value;
 use std::io::{self, Read};
 
 use crate::discover::registry::rewrite_command;
-
 /// Run the Gemini CLI BeforeTool hook.
 /// Reads JSON from stdin, rewrites shell commands to RTK equivalents,
 /// and outputs JSON in Gemini CLI format.
