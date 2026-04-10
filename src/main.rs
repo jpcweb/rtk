@@ -83,8 +83,9 @@ enum Commands {
 
     /// Read file with intelligent filtering
     Read {
-        /// File to read
-        file: PathBuf,
+        /// Files to read (supports multiple, like cat)
+        #[arg(required = true, num_args = 1..)]
+        files: Vec<PathBuf>,
         /// Filter: none (default, full content), minimal, aggressive
         #[arg(short, long, default_value = "none")]
         level: core::filter::FilterLevel,
@@ -1236,25 +1237,45 @@ fn run_cli() -> Result<i32> {
         Commands::Tree { args } => tree::run(&args, cli.verbose)?,
 
         Commands::Read {
-            file,
+            files,
             level,
             max_lines,
             tail_lines,
             line_numbers,
         } => {
-            if file == Path::new("-") {
-                read::run_stdin(level, max_lines, tail_lines, line_numbers, cli.verbose)?;
-            } else {
-                read::run(
-                    &file,
-                    level,
-                    max_lines,
-                    tail_lines,
-                    line_numbers,
-                    cli.verbose,
-                )?;
+            let mut had_error = false;
+            let mut stdin_seen = false;
+
+            for file in &files {
+                let result = if file == Path::new("-") {
+                    if stdin_seen {
+                        eprintln!("rtk: warning: stdin specified more than once");
+                        continue;
+                    }
+                    stdin_seen = true;
+                    read::run_stdin(level, max_lines, tail_lines, line_numbers, cli.verbose)
+                } else {
+                    read::run(
+                        file,
+                        level,
+                        max_lines,
+                        tail_lines,
+                        line_numbers,
+                        cli.verbose,
+                    )
+                };
+
+                if let Err(err) = result {
+                    eprintln!("cat: {}: {}", file.display(), err.root_cause());
+                    had_error = true;
+                }
             }
-            0
+
+            if had_error {
+                1
+            } else {
+                0
+            }
         }
 
         Commands::Smart {
@@ -1913,6 +1934,7 @@ fn run_cli() -> Result<i32> {
         Commands::Proxy { args } => {
             use std::io::{Read, Write};
             use std::process::Stdio;
+            use std::sync::atomic::{AtomicU32, Ordering};
             use std::thread;
 
             if args.is_empty() {
@@ -1948,21 +1970,62 @@ fn run_cli() -> Result<i32> {
                 eprintln!("Proxy mode: {} {}", cmd_name, cmd_args.join(" "));
             }
 
-            let mut child = core::utils::resolved_command(cmd_name.as_ref())
-                .args(&cmd_args)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
-                .context(format!("Failed to execute command: {}", cmd_name))?;
+            static PROXY_CHILD_PID: AtomicU32 = AtomicU32::new(0);
 
-            let stdout_pipe = child
+            #[cfg(unix)]
+            {
+                unsafe extern "C" fn handle_signal(sig: libc::c_int) {
+                    let pid = PROXY_CHILD_PID.load(Ordering::SeqCst);
+                    if pid != 0 {
+                        libc::kill(pid as libc::pid_t, libc::SIGTERM);
+                        libc::waitpid(pid as libc::pid_t, std::ptr::null_mut(), 0);
+                    }
+                    libc::signal(sig, libc::SIG_DFL);
+                    libc::raise(sig);
+                }
+
+                unsafe {
+                    libc::signal(libc::SIGINT, handle_signal as libc::sighandler_t);
+                    libc::signal(libc::SIGTERM, handle_signal as libc::sighandler_t);
+                }
+            }
+
+            struct ChildGuard(Option<std::process::Child>);
+
+            impl Drop for ChildGuard {
+                fn drop(&mut self) {
+                    if let Some(mut child) = self.0.take() {
+                        let _ = child.kill();
+                        let _ = child.wait();
+                    }
+                    PROXY_CHILD_PID.store(0, Ordering::SeqCst);
+                }
+            }
+
+            let mut child = ChildGuard(Some(
+                core::utils::resolved_command(cmd_name.as_ref())
+                    .args(&cmd_args)
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                    .context(format!("Failed to execute command: {}", cmd_name))?,
+            ));
+
+            if let Some(ref inner) = child.0 {
+                PROXY_CHILD_PID.store(inner.id(), Ordering::SeqCst);
+            }
+
+            let inner = child.0.as_mut().context("Child process missing")?;
+            let stdout_pipe = inner
                 .stdout
                 .take()
                 .context("Failed to capture child stdout")?;
-            let stderr_pipe = child
+            let stderr_pipe = inner
                 .stderr
                 .take()
                 .context("Failed to capture child stderr")?;
+
+            const CAPTURE_CAP: usize = 1_048_576;
 
             let stdout_handle = thread::spawn(move || -> std::io::Result<Vec<u8>> {
                 let mut reader = stdout_pipe;
@@ -1974,7 +2037,10 @@ fn run_cli() -> Result<i32> {
                     if count == 0 {
                         break;
                     }
-                    captured.extend_from_slice(&buf[..count]);
+                    if captured.len() < CAPTURE_CAP {
+                        let take = count.min(CAPTURE_CAP - captured.len());
+                        captured.extend_from_slice(&buf[..take]);
+                    }
                     let mut out = std::io::stdout().lock();
                     out.write_all(&buf[..count])?;
                     out.flush()?;
@@ -1993,7 +2059,10 @@ fn run_cli() -> Result<i32> {
                     if count == 0 {
                         break;
                     }
-                    captured.extend_from_slice(&buf[..count]);
+                    if captured.len() < CAPTURE_CAP {
+                        let take = count.min(CAPTURE_CAP - captured.len());
+                        captured.extend_from_slice(&buf[..take]);
+                    }
                     let mut err = std::io::stderr().lock();
                     err.write_all(&buf[..count])?;
                     err.flush()?;
@@ -2003,6 +2072,9 @@ fn run_cli() -> Result<i32> {
             });
 
             let status = child
+                .0
+                .take()
+                .context("Child process missing")?
                 .wait()
                 .context(format!("Failed waiting for command: {}", cmd_name))?;
 

@@ -5,6 +5,7 @@ use serde_json::Value;
 use std::io::{self, Read};
 
 use crate::discover::registry::rewrite_command;
+use crate::hooks::permissions::{check_command, PermissionVerdict};
 /// Run the Gemini CLI BeforeTool hook.
 /// Reads JSON from stdin, rewrites shell commands to RTK equivalents,
 /// and outputs JSON in Gemini CLI format.
@@ -28,6 +29,11 @@ pub fn run_gemini() -> Result<()> {
         .unwrap_or("");
     if cmd.is_empty() {
         print_allow();
+        return Ok(());
+    }
+
+    if check_command(cmd) == PermissionVerdict::Deny {
+        println!(r#"{{"decision":"deny","reason":"Blocked by RTK permission rule"}}"#);
         return Ok(());
     }
 

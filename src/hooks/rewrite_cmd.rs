@@ -14,7 +14,7 @@ use std::io::Write;
 /// | 0    | rewritten| Rewrite allowed — hook may auto-allow the rewritten command. |
 /// | 1    | (none)   | No RTK equivalent — hook passes through unchanged.           |
 /// | 2    | (none)   | Deny rule matched — hook defers to Claude Code native deny.  |
-/// | 3    | rewritten| Ask rule matched — hook rewrites but lets Claude Code prompt.|
+/// | 3    | rewritten| Ask/default matched — hook rewrites but lets Claude Code prompt.|
 pub fn run(cmd: &str) -> anyhow::Result<()> {
     let excluded = crate::core::config::Config::load()
         .map(|c| c.hooks.exclude_commands)
@@ -34,7 +34,7 @@ pub fn run(cmd: &str) -> anyhow::Result<()> {
                 let _ = std::io::stdout().flush();
                 Ok(())
             }
-            PermissionVerdict::Ask => {
+            PermissionVerdict::Ask | PermissionVerdict::Default => {
                 print!("{}", rewritten);
                 let _ = std::io::stdout().flush();
                 std::process::exit(3);

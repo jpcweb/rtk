@@ -740,6 +740,7 @@ dependencies = [
  "flate2",
  "ignore",
  "lazy_static",
+ "libc",
  "quick-xml",
  "regex",
  "rusqlite",
