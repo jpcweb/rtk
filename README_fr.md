@@ -69,7 +69,7 @@ cargo install --path . --force
 ### Verification
 
 ```bash
-rtk --version   # Doit afficher "rtk 0.27.x"
+rtk --version   # Doit afficher "rtk 0.34.3"
 rtk gain        # Doit afficher les statistiques d'economies
 ```
 
@@ -79,7 +79,7 @@ rtk gain        # Doit afficher les statistiques d'economies
 
 ```bash
 # 1. Installer le hook pour Claude Code (recommande)
-rtk init --global
+rtk init -g
 # Suivre les instructions pour enregistrer dans ~/.claude/settings.json
 
 # 2. Redemarrer Claude Code, puis tester
@@ -165,7 +165,8 @@ rtk discover                    # Trouver les economies manquees
 ```toml
 # ~/.config/rtk/config.toml
 [tracking]
-database_path = "/chemin/custom.db"
+enabled = true
+database_path = "/chemin/custom.db"  # defaut: ~/.local/share/rtk/history.db
 
 [hooks]
 exclude_commands = ["curl", "playwright"]

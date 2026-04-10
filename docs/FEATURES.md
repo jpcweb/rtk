@@ -1052,8 +1052,8 @@ Les sous-commandes non reconnues sont transmises directement ou detectees comme 
 
 RTK enregistre chaque execution de commande dans une base SQLite :
 
-- **Emplacement :** `~/.local/share/rtk/tracking.db` (Linux), `~/Library/Application Support/rtk/tracking.db` (macOS)
-- **Retention :** 90 jours automatique
+- **Emplacement :** `~/.local/share/rtk/history.db` (Linux), `~/Library/Application Support/rtk/history.db` (macOS)
+- **Retention :** 10 jours automatique
 - **Metriques :** tokens entree/sortie, pourcentage d'economies, temps d'execution, projet
 
 ---
@@ -1303,7 +1303,7 @@ rtk config --create       # Creer le fichier avec les valeurs par defaut
 [tracking]
 enabled = true              # Activer/desactiver le suivi
 history_days = 10           # Jours de retention (max 10)
-database_path = "/custom/path/tracking.db"  # Chemin personnalise (optionnel)
+database_path = "/custom/path/history.db"  # Chemin personnalise (optionnel)
 
 [display]
 colors = true               # Sortie coloree

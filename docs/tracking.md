@@ -15,7 +15,7 @@ Comprehensive documentation for RTK's token savings tracking system.
 ## Overview
 
 RTK's tracking system records every command execution to provide analytics on token savings. The system:
-- Stores command history in SQLite (~/.local/share/rtk/tracking.db)
+- Stores command history in SQLite (~/.local/share/rtk/history.db)
 - Tracks input/output tokens, savings percentage, and execution time
 - Automatically cleans up records older than 10 days
 - Provides aggregation APIs (daily/weekly/monthly)
@@ -36,7 +36,7 @@ TimedExecution::track(original_cmd, rtk_cmd, input, output)
   ↓
 Tracker::record(original_cmd, rtk_cmd, input_tokens, output_tokens, exec_time_ms)
   ↓
-SQLite database (~/.local/share/rtk/tracking.db)
+SQLite database (~/.local/share/rtk/history.db)
   ↓
 Aggregation APIs (get_summary, get_all_days, etc.)
   ↓
@@ -45,8 +45,8 @@ CLI output (rtk gain) or JSON/CSV export
 
 ### Storage Location
 
-- **Linux**: `~/.local/share/rtk/tracking.db`
-- **macOS**: `~/Library/Application Support/rtk/tracking.db`
+- **Linux**: `~/.local/share/rtk/history.db`
+- **macOS**: `~/Library/Application Support/rtk/history.db`
 
 ### Data Retention
 
@@ -541,7 +541,7 @@ let _ = conn.execute(
 
 - **Local storage only**: Tracking database never leaves the machine
 - **No usage telemetry**: RTK does not send command history, command output, or aggregate usage data off the machine
-- **User control**: Users can delete `~/.local/share/rtk/tracking.db` anytime
+- **User control**: Users can delete `~/.local/share/rtk/history.db` anytime
 - **10-day retention**: Old data automatically purged
 
 ## Troubleshooting
@@ -550,15 +550,15 @@ let _ = conn.execute(
 
 If you see "database is locked" errors:
 - Ensure only one RTK process writes at a time
-- Check file permissions on `~/.local/share/rtk/tracking.db`
-- Delete and recreate: `rm ~/.local/share/rtk/tracking.db && rtk gain`
+- Check file permissions on `~/.local/share/rtk/history.db`
+- Delete and recreate: `rm ~/.local/share/rtk/history.db && rtk gain`
 
 ### Missing exec_time_ms column
 
 Older databases may not have the `exec_time_ms` column. RTK automatically migrates on first use, but you can force it:
 
 ```bash
-sqlite3 ~/.local/share/rtk/tracking.db \
+sqlite3 ~/.local/share/rtk/history.db \
   "ALTER TABLE commands ADD COLUMN exec_time_ms INTEGER DEFAULT 0"
 ```
 

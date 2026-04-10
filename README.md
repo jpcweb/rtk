@@ -76,7 +76,7 @@ cargo install --path . --force
 ### Verify Installation
 
 ```bash
-rtk --version   # Should show "rtk 0.28.2"
+rtk --version   # Should show "rtk 0.34.3"
 rtk gain        # Should show token savings stats
 ```
 
@@ -378,6 +378,7 @@ Commands already using `rtk`, heredocs (`<<`), and unrecognized commands pass th
 
 ```toml
 [tracking]
+enabled = true                 # track command history locally (default: true)
 database_path = "/path/to/custom.db"  # default: ~/.local/share/rtk/history.db
 
 [hooks]
@@ -419,6 +420,13 @@ rm -f ~/.local/bin/rtk       # If installed via ./install.sh default path
 RTK keeps its tracking data on your machine to power local commands like `rtk gain`. It does not send usage telemetry or upload command output.
 
 Source code, file paths, command arguments, secrets, and environment variables are not transmitted by RTK.
+
+To disable local tracking entirely:
+
+```toml
+[tracking]
+enabled = false
+```
 
 ## Contributing
 

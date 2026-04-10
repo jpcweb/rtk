@@ -40,7 +40,7 @@ pub struct TrackingConfig {
 impl Default for TrackingConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
+            enabled: true,
             history_days: DEFAULT_HISTORY_DAYS as u32,
             database_path: None,
         }
@@ -115,6 +115,14 @@ impl Default for LimitsConfig {
 /// Get limits config. Falls back to defaults if config can't be loaded.
 pub fn limits() -> LimitsConfig {
     Config::load().map(|c| c.limits).unwrap_or_default()
+}
+
+/// Check whether local tracking writes are enabled.
+///
+/// Defaults to `true` when the config file is missing or unreadable so
+/// `rtk gain` works out of the box.
+pub fn tracking_enabled() -> bool {
+    Config::load().map(|c| c.tracking.enabled).unwrap_or(true)
 }
 
 impl Config {
@@ -215,5 +223,11 @@ enabled = false
 "#;
         let config: Config = toml::from_str(toml).expect("valid toml");
         assert_eq!(config.tracking.history_days, 1);
+    }
+
+    #[test]
+    fn test_tracking_defaults_to_enabled() {
+        let config = Config::default();
+        assert!(config.tracking.enabled);
     }
 }
